@@ -7,7 +7,12 @@ authors = [
     { name = "Jeanne Gautier", email = "jeanne.wwork@gmail.com" }
 ]
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "graphviz>=0.21",
+    "pandas>=2.3.3",
+    "pydot>=4.0.1",
+    "skrub>=0.6.2",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.4,<0.10.0"]

@@ -30,7 +30,7 @@ def provenance_func_name(func):
         print("-----------------------------------")
         print("now I will go over keyword arguments")
         for k,v in kwargs.items():
-            print("the key is: ", k, " the value will be printed below: ")
+            print("the keyword is: ", k, " the value will be printed below: ")
             print(v)
 
         return func(*args,**kwargs)

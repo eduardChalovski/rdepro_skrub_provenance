@@ -19,6 +19,13 @@ def _product_provenances(p1: str, p2: str) -> str:
     p1 = str(p1)
     p2 = str(p2)
     return f"({p1})*({p2})"
+def _sum_provenances(p1: str, p2: str) -> str:
+    """
+    Combine two provenance expressions using semiring multiplication (*).
+    """
+    p1 = str(p1)
+    p2 = str(p2)
+    return f"({p1})+({p2})"
 
 def with_provenance(df: pd.DataFrame, source_name: str) -> pd.DataFrame:
     """
@@ -44,17 +51,18 @@ def provMerge(left: pd.DataFrame, right: pd.DataFrame, *args, **kwargs):
     left = left.rename(columns={PROV_COLUMN: "_prov_left"})
     right = right.rename(columns={PROV_COLUMN: "_prov_right"})
     #will do with a switch later
-    if (kwargs["how"] == "outer"): 
+    if (kwargs["how"] == "outer"): #OUTER JOIN IS AN UNION
 
         output = left.merge(right, on= kwargs.get("on"), how = "outer")
         provList = []
         for i in range(len(output["_prov_left"])):
-            provList.append(f"{_product_provenances(output['_prov_left'][i], output["_prov_right"][i])}")
+            provList.append(f"{_sum_provenances(output['_prov_left'][i], output["_prov_right"][i])}")
         output[PROV_COLUMN] = provList
         output = output.drop(columns=["_prov_left", "_prov_right"])
 
         return output
-    elif (kwargs["how"] == "inner"): #an inner join is a cartesian product with a selection after that
+    elif (kwargs["how"] == "inner"): #INNER JOIN IS AN INTERSECTION
+        
         return
 
 

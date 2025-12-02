@@ -43,7 +43,7 @@ def _product_provenances(p1: str, p2: str) -> str:
     return f"({p1})*({p2})"
 def _sum_provenances(p1: str, p2: str) -> str:
     """
-    Combine two provenance expressions using semiring multiplication (*).
+    Sum two provenance expressions using semiring sum (+).
     """
     p1 = str(p1)
     p2 = str(p2)

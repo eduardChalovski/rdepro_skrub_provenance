@@ -44,10 +44,9 @@ def provMerge(left: pd.DataFrame, right: pd.DataFrame, *args, **kwargs):
     left = left.rename(columns={PROV_COLUMN: "_prov_left"})
     right = right.rename(columns={PROV_COLUMN: "_prov_right"})
     #will do with a switch later
-    if (kwargs["how"] == "outer"):  #a full outer join is just a cartesian product, here I use the logic from the cartesian function
-        left["_tmp_key"] = 1        # in Jeanne's code
-        right["_tmp_key"] = 1
-        output = left.merge(right, on= "_tmp_key").drop(columns="_tmp_key")
+    if (kwargs["how"] == "outer"): 
+
+        output = left.merge(right, on= kwargs.get("on"), how = "outer")
         provList = []
         for i in range(len(output["_prov_left"])):
             provList.append(f"{_product_provenances(output['_prov_left'][i], output["_prov_right"][i])}")
@@ -55,6 +54,8 @@ def provMerge(left: pd.DataFrame, right: pd.DataFrame, *args, **kwargs):
         output = output.drop(columns=["_prov_left", "_prov_right"])
 
         return output
+    elif (kwargs["how"] == "inner"): #an inner join is a cartesian product with a selection after that
+        return
 
 
 

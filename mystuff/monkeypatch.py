@@ -10,7 +10,29 @@ from pathlib import Path
 
 PROV_COLUMN = "_prov"
 
+def EddieProvenanceReporter(func, kwargs, args):
+    print(f"I know you executed {func.__name__}")
 
+    print("now I will tell you the args")
+    for argument in args:
+            if type(argument) == list:
+                print("-----------------------------------")
+                print("check on the type of argument class list is successful")
+                print("now iterating over each element of the list:")
+                for i,elementi in enumerate(argument):
+                    print(f"that is the {i}th element")
+                    print(elementi)
+            else:
+                print("argument: ", argument)
+                print("type(argument): ", type(argument))
+                
+    print("-----------------------------------")
+    print("now I will go over keyword arguments")
+    for k,v in kwargs.items():
+            print("the keyword is: ", k, " the value will be printed below: ")
+            print(v)
+
+    return 0
 
 def _product_provenances(p1: str, p2: str) -> str:
     """
@@ -46,12 +68,14 @@ _original_merge_top = pd.merge
 
 @wraps(_original_merge_top)
 def provMerge(left: pd.DataFrame, right: pd.DataFrame, *args, **kwargs):
+    EddieProvenanceReporter(_original_merge_top, kwargs, args)
     left = with_provenance(left, "left") 
     right = with_provenance(right, "right")
     left = left.rename(columns={PROV_COLUMN: "_prov_left"})
     right = right.rename(columns={PROV_COLUMN: "_prov_right"})
     #will do with a switch later
-    if (kwargs["how"] == "outer"): #OUTER JOIN IS AN UNION
+    how = kwargs.get("how")
+    if (how == "outer"): #OUTER JOIN IS AN UNION
 
         output = left.merge(right, on= kwargs.get("on"), how = "outer")
         provList = []
@@ -61,10 +85,16 @@ def provMerge(left: pd.DataFrame, right: pd.DataFrame, *args, **kwargs):
         output = output.drop(columns=["_prov_left", "_prov_right"])
 
         return output
-    elif (kwargs["how"] == "inner"): #INNER JOIN IS AN INTERSECTION
-        
-        return
+    elif (how == "inner"): #INNER JOIN IS AN INTERSECTION
 
+        output = left.merge(right, on= kwargs.get("on"), how = "inner")
+        provList = []
+        for i in range(len(output["_prov_left"])):
+            provList.append(f"{_product_provenances(output['_prov_left'][i], output["_prov_right"][i])}")
+        output[PROV_COLUMN] = provList
+        output = output.drop(columns=["_prov_left", "_prov_right"])
+
+        return output
 
 
 # Patch top-level merge

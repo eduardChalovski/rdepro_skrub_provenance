@@ -69,11 +69,10 @@ _original_merge_top = pd.merge
 @wraps(_original_merge_top)
 def provMerge(left: pd.DataFrame, right: pd.DataFrame, *args, **kwargs):
     EddieProvenanceReporter(_original_merge_top, kwargs, args)
-    left = with_provenance(left, "left") # a check should be done if there are already provenance collumns, THIS IS NOT FUTURE PROOF
-    right = with_provenance(right, "right")# A different apporach is wrapping the df class and running this funciton on creation of DF
-    left = left.rename(columns={PROV_COLUMN: "_prov_left"}) # i did not do this as i did not figure out a sexy way to name the collumn
-    right = right.rename(columns={PROV_COLUMN: "_prov_right"}) #in a generic way, where its called "prov_[df name]. That approach is deffinetly future proof and does not break"
-    #will do with a switch later
+    print(left)
+    print(right)
+    left = left.rename(columns={PROV_COLUMN: "_prov_left"}) 
+    right = right.rename(columns={PROV_COLUMN: "_prov_right"}) 
     how = kwargs.get("how")
     if (how == "outer"): #OUTER JOIN IS AN UNION
         output = left.merge(right, on= kwargs.get("on"), how = "outer")
@@ -102,7 +101,15 @@ def provMerge(left: pd.DataFrame, right: pd.DataFrame, *args, **kwargs):
 # Patch top-level merge
 pd.merge = provMerge
 
-# Patch method on DataFrame
+class MyDataFrame(pd.DataFrame):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.provInit()
 
+    def provInit(self):
+        self[PROV_COLUMN] = [f"{self.index}: {i}" for i in range(len(self))]
+        return self
+    
 
+pd.DataFrame = MyDataFrame

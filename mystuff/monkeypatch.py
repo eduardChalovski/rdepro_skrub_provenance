@@ -69,9 +69,7 @@ _original_merge_top = pd.merge
 @wraps(_original_merge_top)
 def provMerge(left: pd.DataFrame, right: pd.DataFrame, *args, **kwargs):
     EddieProvenanceReporter(_original_merge_top, kwargs, args)
-    print(left)
-    print(right)
-    left = left.rename(columns={PROV_COLUMN: "_prov_left"}) 
+    left = left.rename(columns={PROV_COLUMN: "_prov_left"}) # this has to be altered later
     right = right.rename(columns={PROV_COLUMN: "_prov_right"}) 
     how = kwargs.get("how")
     if (how == "outer"): #OUTER JOIN IS AN UNION
@@ -106,6 +104,34 @@ class MyDataFrame(pd.DataFrame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.provInit()
+
+    def merge(self, right: pd.DataFrame, *args, **kwargs):
+        EddieProvenanceReporter(_original_merge_top, kwargs, args)
+        self = self.rename(columns={PROV_COLUMN: "_prov_left"}) # this has to be altered later
+        right = right.rename(columns={PROV_COLUMN: "_prov_right"}) 
+        how = kwargs.get("how")
+        if (how == "outer"): #OUTER JOIN IS AN UNION
+            output = self.merge(right, on= kwargs.get("on"), how = "outer")
+            provList = []
+            for i in range(len(output["_prov_left"])):
+                provList.append(f"{_sum_provenances(output['_prov_left'][i], output["_prov_right"][i])}")
+            output[PROV_COLUMN] = provList
+            output = output.drop(columns=["_prov_left", "_prov_right"])
+
+            return output
+        elif (how == "inner" or how == "left" or how == "right"): #INNER JOIN IS AN INTERSECTION
+        # An inner join can be done as a cartesian product x selection for the provenance tuples
+        # however is simpler and more logical if we just apply the rules for an intersection
+        # also from my understanding, the inner join is a more concise case of left and right join
+        # so the logic here for the polynomials should be the same
+            output = self.merge(right, on= kwargs.get("on"), how = how)
+            provList = []
+            for i in range(len(output["_prov_left"])):
+                provList.append(f"{_product_provenances(output['_prov_left'][i], output["_prov_right"][i])}")
+            output[PROV_COLUMN] = provList
+            output = output.drop(columns=["_prov_left", "_prov_right"])
+
+            return output
 
     def provInit(self):
         self[PROV_COLUMN] = [f"{self.index}: {i}" for i in range(len(self))]

@@ -12,27 +12,39 @@ df2 = pd.DataFrame({"Country": ["Spain", "Belgium", "Italy"],
 def provenance_func_name(func):
     @wraps(func)
     def wrapper(*args,**kwargs):
+        print("[PROVENANCE]: START")
+        #print("SELF ATTRIBUTES:", dir(self))
         print(f"I know you executed {func.__name__}")
+        if len(args) != 0:
+            print("now I will tell you the args")
+            for i, argument in enumerate(args):
+                if type(argument) == list:
+                    print("-----------------------------------")
+                    print("check on the type of argument class list is successful")
+                    print("now iterating over each element of the list:")
+                    for i,elementi in enumerate(argument):
+                        print(f"that is the {i}th element")
+                        print(elementi)
+                else:
+                    if type(argument) == skrub._data_ops._data_ops.DataOp:
+                        #print("The name of the DataOp is: ",argument._fields)
+                        # DataOp.__dict__ or DataOp.__dir__
+                        print()
+                    print(f"argument {i}: ", argument)
 
-        print("now I will tell you the args")
-        for argument in args:
-            if type(argument) == list:
-                print("-----------------------------------")
-                print("check on the type of argument class list is successful")
-                print("now iterating over each element of the list:")
-                for i,elementi in enumerate(argument):
-                    print(f"that is the {i}th element")
-                    print(elementi)
-            else:
-                print("argument: ", argument)
-                print("type(argument): ", type(argument))
+                    print("type(argument): ", type(argument))
+        else:
+            print("There are no args.")
                 
         print("-----------------------------------")
-        print("now I will go over keyword arguments")
-        for k,v in kwargs.items():
-            print("the keyword is: ", k, " the value will be printed below: ")
-            print(v)
-
+        if len(kwargs) !=0:
+            print("now I will go over keyword arguments")
+            for k,v in kwargs.items():
+                print("the keyword is: >>>", k, "<<< the value will be printed below: ")
+                print(v)
+        else:
+            print("There are no kwargs.")
+        print("[PROVENANCE]: END")
         return func(*args,**kwargs)
     return wrapper
 
@@ -60,7 +72,6 @@ dict_of_functions_with_implemented_provenance={
     "pd.merge" : pd.merge,                                  # JOIN          -> example: pd.merge(df1,df2, on="Ids")
     "df.merge" : pd.DataFrame.merge,                        # JOIN          -> example: df1.merge(df2, on="Ids")
 }
-
 
 # bad practice of writting so many if-else statements -> asked gpt for improvement and he suggested code.. but I did not understand it yet
 def wrap_skrub(func, names_of_original_functions, provenance_wrapper_for_the_function, verbose=False):

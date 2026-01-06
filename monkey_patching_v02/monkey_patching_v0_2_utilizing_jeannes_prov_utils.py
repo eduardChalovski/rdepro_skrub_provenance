@@ -2,7 +2,7 @@ from __future__ import annotations
 import pandas as pd
 import skrub
 from functools import wraps
-from monkey_patching_v02.provenance_utils_jeanne import merge_with_provenance, groupby_aggregate_with_provenance, with_provenance
+from pipelines.monkey_patching_v02.provenance_utils_jeanne import merge_with_provenance, groupby_aggregate_with_provenance, with_provenance
 
 # region Helpers
 def get_dataop_dictionary(a_dataop):
@@ -278,69 +278,28 @@ def enter_provenance_mode(func):
         print("[PROVENANCE]: START")
         #print("SELF ATTRIBUTES:", dir(self))
         print(f"I know you executed {func.__name__}")
-        if len(args) != 0:
-            print("now I will tell you the args")
-            for i, argument in enumerate(args):
-                if type(argument) == skrub._data_ops._data_ops.GetAttr:
-                    print("This DataOps is a DataOp Gettatr")           # Does not work
-                elif type(argument) == skrub._data_ops._data_ops.DataOp:
-                        working_dictionary = argument._skrub_impl.__dict__
-                        """print("#############")
-                        print("Trying out new dictionary")
-                        #method_type = working_dictionary["attr_name"]
-                        #if method_type == "merge":
-                        #    print("[Important detail]: This call execution is a merge.")
-                        print(working_dictionary)
-                        #print("The name of the DataOp is: ",argument._fields)
-                        # DataOp.__dict__ or DataOp.__dir__
-                        print("###########")
-                        print()
-                        print(f"argument {i}: ", argument)
-                        print("type(argument): ", type(argument))"""
-                elif type(argument) == list:
-                    print("-----------------------------------")
-                    print("check on the type of argument class list is successful")
-                    print("now iterating over each element of the list:")
-                    for i,elementi in enumerate(argument):
-                        print(f"that is the {i}th element")
-                        print(elementi)
-                else:
-                    """print(f"argument {i}: ", argument)
-                    print("type(argument): ", type(argument))"""
-        else:
-            print("There are no args.")
-                
-        print("-----------------------------------")
-        if len(kwargs) !=0:
-            print("now I will go over keyword arguments")
-            for k,v in kwargs.items():
-                print("the keyword is: >>>", k, "<<< the value will be printed below: ")
-                print(v)
-        else:
-            print("There are no kwargs.")
-        print("[PROVENANCE]: END")
-        final_product = func(*args,**kwargs)
-        if type(final_product) == skrub._data_ops._data_ops.DataOp:
+        result_dataop = func(*args,**kwargs)                                        # Just execute the function and get the result
+        if type(result_dataop) == skrub._data_ops._data_ops.DataOp:                 # If that is a DataOp we can inspect what is stored inside
             print("Final product is a DataOp")
-            final_dict = final_product._skrub_impl.__dict__
-            if "method_name" in final_dict.keys():
+            final_dict = result_dataop._skrub_impl.__dict__                         # Inspecting
+            if "method_name" in final_dict.keys():                                  
                 print(f"""The applied method is {final_dict["method_name"]}""")
                 corresponding_provenance_function = getattr(PROVENANCE_MODULE, "provenance_"+final_dict["method_name"], None)
                 if corresponding_provenance_function is None:
                     print(f"""[PROVENANCE] Can't find a provenance_{final_dict["method_name"]} in the ProvenanceModule.""")
                 else:
                     print("corresponding_provenance_func is NOT None")
-                    name_of_the_operation, result_df = corresponding_provenance_function(final_product)
+                    name_of_the_operation, result_df = corresponding_provenance_function(result_dataop)
                     # My Attempt to store intermediate results to avoid going into the nested structures
-                    PROVENANCE_MODULE.store_provenance_of_the_dataop(final_product, name_of_the_operation, result_df)
+                    PROVENANCE_MODULE.store_provenance_of_the_dataop(result_dataop, name_of_the_operation, result_df)
                     print(f"[PROVENANCE in detail] Inspecting hashdict after {name_of_the_operation}")
                     for k,w in PROVENANCE_MODULE.hashdict.items():
                         print(f"{k}: \n The name of the df is: \n {w[0]} \n The df is: {w[1]}")
                     print("If that was unreadable an excel map is created.")
                     export_hashdict_to_excel(PROVENANCE_MODULE.hashdict)
-                print()
+                print("[PROVENANCE]: END")
             #print(final_dict)
-        return final_product
+        return result_dataop
     return wrapper
 
 def set_provenance(namespace, name_of_the_function, provenance_func=enter_provenance_mode):

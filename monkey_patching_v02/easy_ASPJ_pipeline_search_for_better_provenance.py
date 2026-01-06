@@ -1,8 +1,10 @@
-from monkey_patching_v02.monkey_patching_v0_2_utilizing_jeannes_prov_utils import enter_provenance_mode as provenance_func_name_v0_2
-from monkey_patching_v02.monkey_patching_v0_2_utilizing_jeannes_prov_utils import set_provenance
+from pipelines.monkey_patching_v02.monkey_patching_v0_2_utilizing_jeannes_prov_utils import enter_provenance_mode as provenance_func_name_v0_2
+from pipelines.monkey_patching_v02.monkey_patching_v0_2_utilizing_jeannes_prov_utils import set_provenance
 import skrub
 import pandas as pd
 
+
+# python -m pipelines.monkey_patching_v02.easy_ASPJ_pipeline_search_for_better_provenance
 
 
 #from monkey_patching_v0 import enter_provenance_mode
@@ -102,4 +104,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-# python -m monkey_patching_v02.easy_ASPJ_pipeline_search_for_better_provenance
+# python -m pipelines.monkey_patching_v02.easy_ASPJ_pipeline_search_for_better_provenance

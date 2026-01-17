@@ -1,0 +1,8 @@
+GDPR compliance -> go into dataframe, take provenance collumn, Itterate to find if a data point has been used in 
+the final Dataframe.
+If thats the case, go to the origin and remove the data point. After that, rerun pipeline
+
+Data Leakeage -> have a set of data points that are FORBIDDEN (we cannot train on them). Split the data, but before
+actually splitting the data, do some rpeprocessing on it (simulating leakeage)
+
+fairness -> mark sensitive data and inject bias. use provanenace to detect how much bias in the end reulst of rpeprocessing

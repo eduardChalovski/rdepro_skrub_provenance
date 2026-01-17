@@ -116,18 +116,6 @@ def benchmark(provenance_enable_why_data=False, provenance_enable_how_operator=F
         "n_features",
     ]
 
-    if provenance_enable_how_operator:
-        from pipelines.monkey_patching_v02.monkey_patching_v0_2_utilizing_jeannes_prov_utils import set_provenance
-        from pipelines.monkey_patching_v02.monkey_patching_v0_2_utilizing_jeannes_prov_utils import enter_provenance_mode 
-
-        assert provenance_enable_why_data != provenance_enable_how_operator, "Normally how and why provenance should not be both enabled"
-        set_provenance(
-            skrub._data_ops._evaluation,
-            "evaluate",
-            provenance_func=enter_provenance_mode,
-        )
-        CSV_PATH = Path("scaling_results_with_provenance_how_operator.csv")
-
     if provenance_enable_why_data:
         assert provenance_enable_why_data != provenance_enable_how_operator, "Normally how and why provenance should not be both enabled"
         from monkey_patching_v02_data_provenance import set_provenance, enter_provenance_mode_dataop, enter_provenance_mode_var

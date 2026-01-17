@@ -283,7 +283,7 @@ def enter_provenance_mode_dataop(func):
         
         result_dataop = None
         
-        print("[PROVENANCE]: Start")
+        # print("[PROVENANCE]: Start")
         
         # print("printing result")
         # print(result)
@@ -348,11 +348,11 @@ def enter_provenance_mode_dataop(func):
                 # print(f"""The applied method is {final_dict["method_name"]}""")
                 corresponding_provenance_function = getattr(PROVENANCE_MODULE, "provenance_"+final_dict["method_name"], None)
                 if corresponding_provenance_function is None:
-                    # print(f"""[PROVENANCE] Can't find a provenance_{final_dict["method_name"]} in the ProvenanceModule.""")
+                    print(f"""[PROVENANCE] Can't find a provenance_{final_dict["method_name"]} in the ProvenanceModule.""")
                     pass
                 else:
                     # print("corresponding_provenance_func is NOT None")
-                    result_df = corresponding_provenance_function(result_dataop)
+                    corresponding_provenance_function(result_dataop)
 
             elif "estimator" in final_dict:
                 # print(">>> THIS IS An Apply DataOp")
@@ -414,7 +414,7 @@ def enter_provenance_mode_dataop(func):
                 # print("# printing its dictionary")
                 # print(final_dict)
             
-            print("[PROVENANCE]: END")
+            # print("[PROVENANCE]: END")
             ## print(final_dict)
 
         return func(*args, **kwargs) # Just execute the function and get the result

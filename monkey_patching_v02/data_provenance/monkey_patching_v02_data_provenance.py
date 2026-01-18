@@ -189,6 +189,11 @@ class ProvenanceModule:
         object_inside_preview = preview_of_dataop_inside["preview"]
         if isinstance(object_inside_preview, pd.core.groupby.generic.DataFrameGroupBy):
             cols = object_inside_preview.obj.columns
+            groupby_keys = object_inside_preview.grouper.names
+            # groupby_keys = set(object_inside_preview.obj.index.names)
+
+
+            
         # elif isinstance(object_inside_preview, pd.core.groupby.generic.DataFrameGroupBy):
         elif isinstance(object_inside_preview, pd.DataFrame):
             # print("##############################")
@@ -211,6 +216,10 @@ class ProvenanceModule:
         elif isinstance(agg_dict, list):
             agg_dict = {col: agg_dict for col in cols if not col.startswith("_prov") }
 
+        # Remove groupby keys from aggregation dict
+        for k in groupby_keys:
+            agg_dict.pop(k, None)
+
         # print("agg_dict")
         # print(agg_dict)
         # print("##############################")
@@ -228,7 +237,7 @@ class ProvenanceModule:
         # earlier
         d["args"] = (agg_dict,)
         d["kwargs"] = {}
-
+        # this function has a side effect -> it adjusts the dictionary in place, you do not need to 
         return a_dataop
 
 
@@ -420,6 +429,104 @@ def enter_provenance_mode_dataop(func):
         return func(*args, **kwargs) # Just execute the function and get the result
     return wrapper
 
+# region prov entry point
+def enter_provenance_mode_dataop_x(func):
+    @wraps(func)
+    def wrapper(*args,**kwargs):
+        
+        result_dataop = None
+        
+        print("[PROVENANCE]: Start")
+        
+        for argument in args:
+                     
+            
+            if isinstance(argument, skrub.DataOp):
+                result_dataop = argument
+                break
+
+        if isinstance(result_dataop, skrub.DataOp):                 # If that is a DataOp we can inspect what is stored inside
+            final_dict = get_dataop_dictionary(result_dataop)                         # Inspecting
+            if "method_name" in final_dict.keys():                                    # Having specific attribute in the dictionary classifies what kind of DataOp it is 
+                # print(">>> THIS IS A CallMethod DataOp")
+                # # ASPJ logic is covered here
+                # # Pandas logic is covered here
+                # print("    method_name =", final_dict["method_name"])
+                # print("    obj =", final_dict.get("obj"))
+                # print("    args =", final_dict.get("args"))
+                # print("    kwargs =", final_dict.get("kwargs"))
+                corresponding_provenance_function = getattr(PROVENANCE_MODULE, "provenance_"+final_dict["method_name"], None)
+                if corresponding_provenance_function is None:
+                    # print(f"""[PROVENANCE] Can't find a provenance_{final_dict["method_name"]} in the ProvenanceModule.""")
+                    pass
+                else:
+                    result_df = corresponding_provenance_function(result_dataop)
+
+            elif "estimator" in final_dict:
+                # print(">>> THIS IS An Apply DataOp")
+                # print(argument)
+                # print(final_dict)
+                # print(final_dict.keys())
+                # print(final_dict)
+                # print("    name =", final_dict["name"])                
+                print("    X =", final_dict["X"])
+                print("    get_dataop_dictionary(X) =", get_dataop_dictionary(final_dict["X"]))
+                # print("    y =", final_dict["y"])
+                # print("    estimator =", final_dict["estimator"])
+
+                est = final_dict["estimator"]
+                if is_regressor(est) or is_classifier(est) or is_outlier_detector(est):
+
+                    dataop_X_dict = get_dataop_dictionary(final_dict["X"])
+                    preview  = dataop_X_dict["results"]["preview"]
+
+                    X_prov = s.select(preview, PROV_SELECTOR)
+                    X_main = s.select(preview, final_dict["cols"] - PROV_SELECTOR)
+
+                    # mutate preview before estimator runs
+                    dataop_X_dict["results"]["preview"] = X_main
+
+                    result = func(*args, **kwargs)
+
+                    X_out = pd.concat([result, X_prov], axis=1)
+
+                    # update Apply DataOp result (this is the critical part for propagation)
+                    set_dataop_dictionary_val(
+                        a_dataop=result_dataop,
+                        attribute_name="results",
+                        new_val={
+                            **final_dict["results"],
+                            "value": X_out,
+                            "preview": X_out,
+                        }
+                    )
+
+                    return X_out
+                else:
+                    set_dataop_dictionary_val(a_dataop=result_dataop,
+                                              attribute_name="cols",
+                                              new_val=final_dict["cols"] - PROV_SELECTOR)
+                
+
+                
+                # # print(" type of estimator =", type(final_dict["estimator"]))
+            elif "attr_name" in final_dict:
+                # TODO: introduce provenance, if one column is selected -> attach to it all prov_cols -> risky if for example ApplyToCols takes one column and gets a dataframe..
+                pass
+                # print(">>> THIS IS A GetAttr DataOp")
+                # print("    attr_name =", final_dict["attr_name"])
+                # print("    source_object =", final_dict.get("source_object"))
+            else:
+                pass
+                # print("The evaluated DataOp is neither a CallMethod, nor a GetAttr, not a Apply")
+                # print("# printing its dictionary")
+                # print(final_dict)
+            
+            print("[PROVENANCE]: END")
+            ## print(final_dict)
+
+        return func(*args, **kwargs) # Just execute the function and get the result
+    return wrapper
 
 # region provenance var
 

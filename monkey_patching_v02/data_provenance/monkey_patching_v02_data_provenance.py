@@ -8,10 +8,10 @@ from functools import wraps
 
 # region Helpers
 def get_dataop_dictionary(a_dataop):
-    return a_dataop._skrub_impl.__dict__
+    return a_dataop.__dict__
 
 def set_dataop_dictionary_val(a_dataop, attribute_name, new_val):
-    a_dataop._skrub_impl.__dict__[attribute_name] = new_val
+    a_dataop.__dict__[attribute_name] = new_val
 
 def get_var_dictionary(a_var):
     return a_var.__dict__
@@ -153,15 +153,9 @@ class ProvenanceModule:
 
     # region override agg
     def provenance_agg(self,a_dataop):
-        # resulting_dataop_dictionary =
-        d =  get_dataop_dictionary(a_dataop)
-        
-        # print("dictionary before")
-        # print(d)
-        # print("#"*80)
-        # print("dictionary of groupby inside")
-        preview_of_dataop_inside = get_dataop_dictionary(d["obj"])["results"]
-        # print(preview_of_dataop_inside)
+        # print("hey")
+        d =  a_dataop.__dict__
+        preview_of_dataop_inside = d["obj"].__dict__["_skrub_impl"].__dict__["results"]
 
         # ---- normalize agg args (FAST path, as before) ----
         args = d.get("args", ())
@@ -176,20 +170,14 @@ class ProvenanceModule:
             d["args"] = (agg_dict,)
             d["kwargs"] = {}
 
-        # Ensure canonical form
-        # d["args"] = (agg_dict,)
-        # d["kwargs"] = {}
-
-        
-
         # ---- ADD _prov* columns (IN PLACE, FAST) ----
-        # cols = list(d["obj"].obj.columns.copy())
-        # print("""preview_of_dataop_inside["preview"]""")
-        # print(preview_of_dataop_inside["preview"])
-        object_inside_preview = preview_of_dataop_inside["preview"]
+        if "preview" in preview_of_dataop_inside:
+            object_inside_preview = preview_of_dataop_inside["preview"]
+        else:
+            object_inside_preview = preview_of_dataop_inside["fit_transform"]
         if isinstance(object_inside_preview, pd.core.groupby.generic.DataFrameGroupBy):
             cols = object_inside_preview.obj.columns
-            groupby_keys = object_inside_preview.grouper.names
+            groupby_keys = object_inside_preview._grouper.names
             # groupby_keys = set(object_inside_preview.obj.index.names)
 
 
@@ -198,16 +186,8 @@ class ProvenanceModule:
         elif isinstance(object_inside_preview, pd.DataFrame):
             # print("##############################")
             cols = object_inside_preview.columns
+            groupby_keys =[]
 
-        # prov_cols = [c for c in cols if c.startswith("_prov")]
-        # data_cols = [c for c in cols if not c.startswith("_prov")]
-
-        # if isinstance(agg_dict, str) or callable(agg_dict):
-        #     # apply to all columns
-        #     agg_dict = {col: agg_dict for col in cols if not col.startswith("_prov") }
-
-        # elif isinstance(agg_dict, list):
-        #     agg_dict = {col: agg_dict for col in cols if not col.startswith("_prov") }
 
         if isinstance(agg_dict, str) or callable(agg_dict):
             # apply to all columns
@@ -220,23 +200,14 @@ class ProvenanceModule:
         for k in groupby_keys:
             agg_dict.pop(k, None)
 
-        # print("agg_dict")
-        # print(agg_dict)
-        # print("##############################")
-        # print("cols: ", cols)
         for c in cols:
             # startswith is faster than regex
             if c.startswith("_prov"):
                 agg_dict[c] = list      #TODO: consider tuple instead of list # TODO: but it should be list, list is a transformation and cannot be mixed with aggregation functions due to pandas rules
 
-        # print("agg_dict again!")
-        # print(agg_dict)
-        
-        # print("dictionary after")
-        # print(d)
-        # earlier
         d["args"] = (agg_dict,)
         d["kwargs"] = {}
+
         # this function has a side effect -> it adjusts the dictionary in place, you do not need to 
         return a_dataop
 
@@ -277,8 +248,8 @@ PROVENANCE_MODULE = ProvenanceModule()
 #     )
 
 #     return new_df
-
-from provenance_utils_jeanne_performant import with_provenance_integers_shifted
+from pipelines.monkey_patching_v02.data_provenance.provenance_utils_jeanne_performant import with_provenance_integers_shifted
+# from pipelines.monkey_patching_v02.data_provenance.provenance_utils_jeanne_performant import with_provenance_integers_shifted
 import types
 from sklearn.base import BaseEstimator, TransformerMixin, is_outlier_detector, is_classifier, is_regressor
 
@@ -286,281 +257,276 @@ from skrub import selectors as s
 PROV_SELECTOR = s.filter_names(str.startswith, "_prov")
 
 # region prov entry point
-def enter_provenance_mode_dataop(func):
+def enter_provenance_mode_dataop_callmethod(func):
     @wraps(func)
     def wrapper(*args,**kwargs):
-        
-        result_dataop = None
-        
-        print("[PROVENANCE]: Start")
-        
-        # print("printing result")
-        # print(result)
-        # print(type(result))
-        # print("printing all arguments")
-        for argument in args:
-            # print("#"*40)
-            # print("argument")
-            # print(argument)
-            # print("isinstance of dataop")
-            # print(isinstance(argument, skrub.DataOp))
-            # # print(isinstance(argument, skrub._data_ops._data_ops.DataOp))
-            # # print(type(result_dataop) == skrub._data_ops._data_ops.DataOp)
-            # # print(isinstance(argument, skrub._data_ops._data_ops.Var))
-            # # print(type(argument)== skrub._data_ops._data_ops.Var)
-            # # print("type of argument")
-            # # print(type(argument))
-            # print("#"*40)
+        # print("args")
+        # print(args)
+        the_callmethod_dataop = args[0]
+        print("[PROVENANCE] Start ")
+        print(the_callmethod_dataop)
+        # print(isinstance(the_callmethod_dataop, skrub._data_ops._data_ops.Apply))
+        # print(the_callmethod_dataop.estimator)
+        if "method_name" in the_callmethod_dataop.__dict__ and the_callmethod_dataop.method_name != "agg":
+            print("[PROVENANCE] End ", the_callmethod_dataop.method_name)
 
-            # print(argument)
-            # if isinstance(argument, types.SimpleNamespace):
-            #     print("#"*80)
-            #     print("Found SimpleNamespace")
-            #     print("#"*80)
-            #     print(argument)
-            #     result = func(*args,**kwargs)
-            #     # print(type(result))
-            #     result = with_provenance_integers_shifted(df=final_dict["value"], table_name=final_dict["name"])
-            #     # print()
-            #     # print("Result after adjusting SimpleNamespace")
-            #     # print(result)
-                
-            #     print("[PROVENANCE VAR]: End")
-            #     return result
-            
-            
-            if isinstance(argument, skrub.DataOp):
-                result_dataop = argument
-                break
-        # result_dataop = func(*args,**kwargs)
+            return func(*args,**kwargs)
+        elif "method_name" in the_callmethod_dataop.__dict__:
+            PROVENANCE_MODULE.provenance_agg(the_callmethod_dataop)
+            # print("[PROVENANCE] End ", the_callmethod_dataop.method_name)
 
+            # print()
+            return func(*args, **kwargs) # Just execute the function and get the result
 
-        # if type(result_dataop) == skrub._data_ops._data_ops.DataOp:                 # If that is a DataOp we can inspect what is stored inside
-        if isinstance(result_dataop, skrub.DataOp):                 # If that is a DataOp we can inspect what is stored inside
-            final_dict = get_dataop_dictionary(result_dataop)                         # Inspecting
-            # if "name" in final_dict.keys() and "value" in final_dict.keys():
-            #     print(">>> THIS IS Var DataOp")
-            #     set_dataop_dictionary_val(a_dataop=result_dataop, 
-            #                               attribute_name="value", # dataframe is stored under value -> we append the provenance column to it
-            #                               new_val=with_provenance_integers_shifted(df=final_dict["value"], table_name=final_dict["name"]))
-                
-            # el
-            if "method_name" in final_dict.keys():                                    # Having specific attribute in the dictionary classifies what kind of DataOp it is 
-                # print(">>> THIS IS A CallMethod DataOp")
-                # # ASPJ logic is covered here
-                # # Pandas logic is covered here
-                # print("    method_name =", final_dict["method_name"])
-                # print("    obj =", final_dict.get("obj"))
-                # print("    args =", final_dict.get("args"))
-                # print("    kwargs =", final_dict.get("kwargs"))
-
-                # print(f"""The applied method is {final_dict["method_name"]}""")
-                corresponding_provenance_function = getattr(PROVENANCE_MODULE, "provenance_"+final_dict["method_name"], None)
-                if corresponding_provenance_function is None:
-                    # print(f"""[PROVENANCE] Can't find a provenance_{final_dict["method_name"]} in the ProvenanceModule.""")
-                    pass
-                else:
-                    # print("corresponding_provenance_func is NOT None")
-                    result_df = corresponding_provenance_function(result_dataop)
-
-            elif "estimator" in final_dict:
-                # print(">>> THIS IS An Apply DataOp")
-                # print(argument)
-                # print(final_dict)
-                # print(final_dict.keys())
-                # print(final_dict)
-                # print("    name =", final_dict["name"])                
-                print("    X =", final_dict["X"])
-                print("    get_dataop_dictionary(X) =", get_dataop_dictionary(final_dict["X"]))
-                # print("    y =", final_dict["y"])
-                # print("    estimator =", final_dict["estimator"])
-
-                est = final_dict["estimator"]
-                if is_regressor(est) or is_classifier(est) or is_outlier_detector(est):
-
-                    dataop_X_dict = get_dataop_dictionary(final_dict["X"])
-                    preview  = dataop_X_dict["results"]["preview"]
-
-                    X_prov = s.select(preview, PROV_SELECTOR)
-                    X_main = s.select(preview, final_dict["cols"] - PROV_SELECTOR)
-
-                    # mutate preview before estimator runs
-                    dataop_X_dict["results"]["preview"] = X_main
-
-                    result = func(*args, **kwargs)
-
-                    X_out = pd.concat([result, X_prov], axis=1)
-
-                    # update Apply DataOp result (this is the critical part for propagation)
-                    set_dataop_dictionary_val(
-                        a_dataop=result_dataop,
-                        attribute_name="results",
-                        new_val={
-                            **final_dict["results"],
-                            "value": X_out,
-                            "preview": X_out,
-                        }
-                    )
-
-                    return X_out
-                else:
-                    set_dataop_dictionary_val(a_dataop=result_dataop,
-                                              attribute_name="cols",
-                                              new_val=final_dict["cols"] - PROV_SELECTOR)
-                
-
-                
-                # # print(" type of estimator =", type(final_dict["estimator"]))
-            elif "attr_name" in final_dict:
-                # TODO: introduce provenance, if one column is selected -> attach to it all prov_cols -> risky if for example ApplyToCols takes one column and gets a dataframe..
-                pass
-                # print(">>> THIS IS A GetAttr DataOp")
-                # print("    attr_name =", final_dict["attr_name"])
-                # print("    source_object =", final_dict.get("source_object"))
-            else:
-                pass
-                # print("The evaluated DataOp is neither a CallMethod, nor a GetAttr, not a Apply")
-                # print("# printing its dictionary")
-                # print(final_dict)
-            
-            print("[PROVENANCE]: END")
-            ## print(final_dict)
-
-        return func(*args, **kwargs) # Just execute the function and get the result
     return wrapper
 
-# region prov entry point
-def enter_provenance_mode_dataop_x(func):
+
+def enter_provenance_mode_apply_format_predictions(func):
+    from functools import wraps
+    import pandas as pd
+
     @wraps(func)
-    def wrapper(*args,**kwargs):
-        
-        result_dataop = None
-        
-        print("[PROVENANCE]: Start")
-        
-        for argument in args:
-                     
+    def wrapper(self, X, pred):
+        # Call original formatter
+        out = func(self, X, pred)
+
+        # Only attach provenance if output is tabular
+        if not isinstance(out, (pd.DataFrame, pd.Series)):
+            return out
+
+        X_prov = s.select(X, PROV_SELECTOR)
+        if X_prov is None or len(X_prov.columns) == 0:
+            return out
+
+        if isinstance(out, pd.Series):
+            out = out.to_frame(name=out.name or "prediction")
+
+        return pd.concat([out, X_prov], axis=1)
+
+    return wrapper
+
+
+
+
+
+
+def enter_provenance_mode_dataop_apply_x(func):
+    from functools import wraps
+
+    @wraps(func)
+    def wrapper_func(*args, **kwargs):
+        apply_dataop = args[0]
+        final_dict = apply_dataop.__dict__
+        est = apply_dataop.estimator
+
+        # Wrap estimator predict (or transform) if it's a model
+        if is_regressor(est) or is_classifier(est) or is_outlier_detector(est):
+            orig_predict = est.predict
+            print("hey")
+            print("apply_dataop.X")
+            print(apply_dataop.X)
+            print("its type")
+            print(type(apply_dataop.X))
+            print("maybe its preview")
+            # print(apply_dataop.X.preview)
+            # Split provenance columns from main data
+            X_prov = s.select(apply_dataop.X, PROV_SELECTOR)
+            X_main = s.select(apply_dataop.X, final_dict["cols"] - PROV_SELECTOR)
+
+            # Run original prediction
+            y = func(X_main, *args[1:], **kwargs)
+
+            # Convert Series -> DataFrame if needed
+            if isinstance(y, pd.Series):
+                y = y.to_frame(name=y.name or "prediction")
+
+            # Concatenate provenance columns
+            return pd.concat([y, X_prov], axis=1)
+
+        # Call the original apply() function
+        return func(*args, **kwargs)
+
+    return wrapper_func
+
+
+
+
+
+        #         est = final_dict["estimator"]
+        #         if is_regressor(est) or is_classifier(est) or is_outlier_detector(est):
+
+        #             dataop_X_dict = get_dataop_dictionary(final_dict["X"])
+        #             preview  = dataop_X_dict["results"]["preview"]
+
+        #             X_prov = s.select(preview, PROV_SELECTOR)
+        #             X_main = s.select(preview, final_dict["cols"] - PROV_SELECTOR)
+
+        #             # mutate preview before estimator runs
+        #             dataop_X_dict["results"]["preview"] = X_main
+
+        #             result = func(*args, **kwargs)
+
+        #             X_out = pd.concat([result, X_prov], axis=1)
+
+        #             # update Apply DataOp result (this is the critical part for propagation)
+        #             set_dataop_dictionary_val(
+        #                 a_dataop=result_dataop,
+        #                 attribute_name="results",
+        #                 new_val={
+        #                     **final_dict["results"],
+        #                     "value": X_out,
+        #                     "preview": X_out,
+        #                 }
+        #             )
+
+        #             return X_out
+        #         else:
+        #             set_dataop_dictionary_val(a_dataop=result_dataop,
+        #                                       attribute_name="cols",
+        #                                       new_val=final_dict["cols"] - PROV_SELECTOR)
+    return wrapper_func
+
+def enter_provenance_mode_dataop_callmethod_gpt(func):
+    """
+    Wrap CallMethod.compute to inject provenance tracking for 'agg'.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        callmethod_node = args[0]  # The CallMethod instance
+
+        method_name = getattr(callmethod_node, "method_name", None)
+        print(f"[PROVENANCE] Start {method_name}")
+
+        # Only intercept 'agg'
+        if method_name == "agg":
+            # Inject provenance: call your provenance aggregation routine
+            # This should modify the preview / results of the DataOp before actual computation
+            try:
+                PROVENANCE_MODULE.provenance_agg(callmethod_node)
+                # Optionally attach an empty _prov list to the preview so it exists
+                preview = getattr(callmethod_node, "_preview", None)
+                if preview is not None:
+                    preview["_prov"] = []  # Initialize provenance list
+            except Exception as e:
+                print(f"[PROVENANCE] Failed during provenance injection: {e}")
+
+        # Execute the actual method to get the result
+        result = func(*args, **kwargs)
+
+        print(f"[PROVENANCE] End {method_name}")
+        return result
+
+    return wrapper
+        # print("inside isinstance(result_dataop, skrub.DataOp)")
+
+        # if "method_name" in final_dict.keys():                                    # Having specific attribute in the dictionary classifies what kind of DataOp it is 
+        #     print("checking the corresponding provenance function")
+        #     corresponding_provenance_function = getattr(PROVENANCE_MODULE, "provenance_"+final_dict["method_name"], None)
+        #     if corresponding_provenance_function is None:
+        #         # print(f"""[PROVENANCE] Can't find a provenance_{final_dict["method_name"]} in the ProvenanceModule.""")
+        #         pass
+        #     else:
+        #         print("corresponding_provenance_func is NOT None")
+        #         corresponding_provenance_function(result_dataop)
+
+        # TODO: continue witht the apply dataop here
+        # if isinstance(result_dataop, skrub.DataOp):                 # If that is a DataOp we can inspect what is stored inside
             
-            if isinstance(argument, skrub.DataOp):
-                result_dataop = argument
-                break
 
-        if isinstance(result_dataop, skrub.DataOp):                 # If that is a DataOp we can inspect what is stored inside
-            final_dict = get_dataop_dictionary(result_dataop)                         # Inspecting
-            if "method_name" in final_dict.keys():                                    # Having specific attribute in the dictionary classifies what kind of DataOp it is 
-                # print(">>> THIS IS A CallMethod DataOp")
-                # # ASPJ logic is covered here
-                # # Pandas logic is covered here
-                # print("    method_name =", final_dict["method_name"])
-                # print("    obj =", final_dict.get("obj"))
-                # print("    args =", final_dict.get("args"))
-                # print("    kwargs =", final_dict.get("kwargs"))
-                corresponding_provenance_function = getattr(PROVENANCE_MODULE, "provenance_"+final_dict["method_name"], None)
-                if corresponding_provenance_function is None:
-                    # print(f"""[PROVENANCE] Can't find a provenance_{final_dict["method_name"]} in the ProvenanceModule.""")
-                    pass
-                else:
-                    result_df = corresponding_provenance_function(result_dataop)
+        #     if "estimator" in final_dict:
 
-            elif "estimator" in final_dict:
-                # print(">>> THIS IS An Apply DataOp")
-                # print(argument)
-                # print(final_dict)
-                # print(final_dict.keys())
-                # print(final_dict)
-                # print("    name =", final_dict["name"])                
-                print("    X =", final_dict["X"])
-                print("    get_dataop_dictionary(X) =", get_dataop_dictionary(final_dict["X"]))
-                # print("    y =", final_dict["y"])
-                # print("    estimator =", final_dict["estimator"])
 
-                est = final_dict["estimator"]
-                if is_regressor(est) or is_classifier(est) or is_outlier_detector(est):
+        #         est = final_dict["estimator"]
+        #         if is_regressor(est) or is_classifier(est) or is_outlier_detector(est):
 
-                    dataop_X_dict = get_dataop_dictionary(final_dict["X"])
-                    preview  = dataop_X_dict["results"]["preview"]
+        #             dataop_X_dict = get_dataop_dictionary(final_dict["X"])
+        #             preview  = dataop_X_dict["results"]["preview"]
 
-                    X_prov = s.select(preview, PROV_SELECTOR)
-                    X_main = s.select(preview, final_dict["cols"] - PROV_SELECTOR)
+        #             X_prov = s.select(preview, PROV_SELECTOR)
+        #             X_main = s.select(preview, final_dict["cols"] - PROV_SELECTOR)
 
-                    # mutate preview before estimator runs
-                    dataop_X_dict["results"]["preview"] = X_main
+        #             # mutate preview before estimator runs
+        #             dataop_X_dict["results"]["preview"] = X_main
 
-                    result = func(*args, **kwargs)
+        #             result = func(*args, **kwargs)
 
-                    X_out = pd.concat([result, X_prov], axis=1)
+        #             X_out = pd.concat([result, X_prov], axis=1)
 
-                    # update Apply DataOp result (this is the critical part for propagation)
-                    set_dataop_dictionary_val(
-                        a_dataop=result_dataop,
-                        attribute_name="results",
-                        new_val={
-                            **final_dict["results"],
-                            "value": X_out,
-                            "preview": X_out,
-                        }
-                    )
+        #             # update Apply DataOp result (this is the critical part for propagation)
+        #             set_dataop_dictionary_val(
+        #                 a_dataop=result_dataop,
+        #                 attribute_name="results",
+        #                 new_val={
+        #                     **final_dict["results"],
+        #                     "value": X_out,
+        #                     "preview": X_out,
+        #                 }
+        #             )
 
-                    return X_out
-                else:
-                    set_dataop_dictionary_val(a_dataop=result_dataop,
-                                              attribute_name="cols",
-                                              new_val=final_dict["cols"] - PROV_SELECTOR)
+        #             return X_out
+        #         else:
+        #             set_dataop_dictionary_val(a_dataop=result_dataop,
+        #                                       attribute_name="cols",
+        #                                       new_val=final_dict["cols"] - PROV_SELECTOR)
                 
 
                 
-                # # print(" type of estimator =", type(final_dict["estimator"]))
-            elif "attr_name" in final_dict:
-                # TODO: introduce provenance, if one column is selected -> attach to it all prov_cols -> risky if for example ApplyToCols takes one column and gets a dataframe..
-                pass
-                # print(">>> THIS IS A GetAttr DataOp")
-                # print("    attr_name =", final_dict["attr_name"])
-                # print("    source_object =", final_dict.get("source_object"))
-            else:
-                pass
-                # print("The evaluated DataOp is neither a CallMethod, nor a GetAttr, not a Apply")
-                # print("# printing its dictionary")
-                # print(final_dict)
+        #         # # print(" type of estimator =", type(final_dict["estimator"]))
+        #     elif "attr_name" in final_dict:
+        #         # TODO: introduce provenance, if one column is selected -> attach to it all prov_cols -> risky if for example ApplyToCols takes one column and gets a dataframe..
+        #         pass
+
+        #     else:
+        #         pass
+
             
-            print("[PROVENANCE]: END")
+        # print("[PROVENANCE]: END")
             ## print(final_dict)
 
-        return func(*args, **kwargs) # Just execute the function and get the result
-    return wrapper
+    #     return func(*args, **kwargs) # Just execute the function and get the result
+    # return wrapper
 
 # region provenance var
 
 def enter_provenance_mode_var(func):
+    
     @wraps(func)
     def wrapper(*args,**kwargs):
+        # print("[PROVENANCE var] Start")
+
+        # print("[PROVENANCE var] the args are")
+        # print(args)
+        # for i, argument in enumerate(args):
+        #     print(f"{i}:{argument}")
+            
         
         # result_dataop = None
         
-        print("[PROVENANCE Var]: Start")
+        # print("[PROVENANCE Var]: Start")
         
         # print("printing result")
         # print(result)
         # print(type(result))
         # print("printing all arguments")
-        for argument in args:
-            # print("#"*40)
-            # print("argument")
-            # print(argument)
-            # # print("isinstance of dataop")
-            # # print(isinstance(argument, skrub.DataOp))
-            # # print(isinstance(argument, skrub._data_ops._data_ops.DataOp))
-            # # print(type(result_dataop) == skrub._data_ops._data_ops.DataOp)
-            # # print(isinstance(argument, skrub._data_ops._data_ops.Var))
-            # # print(type(argument)== skrub._data_ops._data_ops.Var)
-            # print("type of argument")
-            # print(type(argument))
-            # print("#"*40)
-            if isinstance(argument, skrub._data_ops._data_ops.Var):
-                # print("I guess the CallMethod has var")
-                # print("check worked!")
-                # skrub.Var is the _skrub_impl -> to get the dictionary just call argument.__dict__
-                # Note it uses get_var_dictionary, not get_dataop_dictionary 
-                final_dict = get_var_dictionary(argument)
+        # for argument in args:
+        #     # print("#"*40)
+        #     # print("argument")
+        #     # print(argument)
+        #     # # print("isinstance of dataop")
+        #     # # print(isinstance(argument, skrub.DataOp))
+        #     # # print(isinstance(argument, skrub._data_ops._data_ops.DataOp))
+        #     # # print(type(result_dataop) == skrub._data_ops._data_ops.DataOp)
+        #     # # print(isinstance(argument, skrub._data_ops._data_ops.Var))
+        #     # # print(type(argument)== skrub._data_ops._data_ops.Var)
+        #     # print("type of argument")
+        #     # print(type(argument))
+        #     # print("#"*40)
+        #     if isinstance(argument, skrub._data_ops._data_ops.Var):
+        #         # print("I guess the CallMethod has var")
+        #         # print("check worked!")
+        #         # skrub.Var is the _skrub_impl -> to get the dictionary just call argument.__dict__
+        #         # Note it uses get_var_dictionary, not get_dataop_dictionary 
+        #         final_dict = get_var_dictionary(argument)
                 # result_var = argument
                 # if "name" in final_dict.keys() and "value" in final_dict.keys():
                 #     # print(">>> THIS IS Var DataOp")
@@ -582,10 +548,9 @@ def enter_provenance_mode_var(func):
             #     print("after: ",argument)
                 
         
-        result = func(*args,**kwargs)
+        # result = func(*args,**kwargs)
         # print(type(result))
-        result = with_provenance_integers_shifted(df=final_dict["value"], table_name=final_dict["name"])
-
+        # final_dict = get_var_dictionary(args[0])
 
         # set_var_dictionary_val(
         #                     a_var=result_var,
@@ -599,19 +564,63 @@ def enter_provenance_mode_var(func):
         # print(result)
         # print()
         # print("Result after adjusting SimpleNamespace")
-        print(result)
-        
-        print("[PROVENANCE VAR]: End")
+        # print("[PROVENANCE Var]: Start")
+        # print(result)
+        # print("[PROVENANCE VAR]: End")
 
-        return result # Just execute the function and get the result
+        return with_provenance_integers_shifted(df=args[0].__dict__["value"], table_name=args[0].__dict__["name"]) # Just execute the function and get the result
     return wrapper
 
-def set_provenance(namespace, name_of_the_function, provenance_func=enter_provenance_mode_dataop):
+def enter_provenance_mode_var(func):
+    @wraps(func)
+    def wrapper(*args,**kwargs):
+        return with_provenance_integers_shifted(df=args[0].__dict__["value"], table_name=args[0].__dict__["name"]) # Just execute the function and get the result
+    return wrapper
+def set_provenance(namespace, name_of_the_function, provenance_func=enter_provenance_mode_dataop_callmethod):
     skrub_eval_namespace = namespace
     name = name_of_the_function
     skrub_eval = getattr(skrub_eval_namespace,name,None)
     setattr(skrub_eval_namespace, name, provenance_func(skrub_eval))
     # print(f"Set provenance for {name}")
+
+
+from skrub._data_ops._evaluation import _Evaluator
+from skrub._data_ops._data_ops import CallMethod
+
+
+def enter_provenance_mode_evaluator_eval_data_op(orig_func):
+    @wraps(orig_func)
+    def wrapper(self, data_op):
+        impl = data_op._skrub_impl
+
+        # Inject BEFORE preview is computed
+        if (isinstance(impl, CallMethod) and impl.method_name == "agg" and self.mode == "preview"):
+            args = impl.args or ()
+            if args and isinstance(args[0], dict) and "_prov" not in args[0]: # do you need it here? -> and "_prov" not in args[0] 
+                PROVENANCE_MODULE.provenance_agg(impl)
+
+        # IMPORTANT: capture and return the value
+        result = yield from orig_func(self, data_op)
+        return result
+    pd.DataFrame.agg
+
+    return wrapper
+
+
+def set_provenance_evaluator(cls, method_name, provenance_wrapper):
+    """
+    Monkey-patch an Evaluator method with provenance support.
+    """
+    orig = getattr(cls, method_name)
+
+    # Avoid double patching
+    if getattr(orig, "_is_provenance_wrapped", False):
+        return
+
+    wrapped = provenance_wrapper(orig)
+    wrapped._is_provenance_wrapped = True
+
+    setattr(cls, method_name, wrapped)
 
 
 # region checklist of functions

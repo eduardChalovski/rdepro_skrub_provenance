@@ -99,7 +99,7 @@ def run_pipeline(df_main, df_lookup, verbose=False):
 
 def benchmark(provenance_enable_why_data=False, provenance_enable_how_operator=False, n_runs=5, dataset_sizes=None, verbose=False):
     if dataset_sizes is None:
-        dataset_sizes = [1000, 10_000] #, 100_000, 1_000_000, 10_000_000]
+        dataset_sizes = [10_000, 100_000, 1_000_000, 10_000_000]
         # dataset_sizes = [1_000_000_000]
 
     CSV_PATH = Path("scaling_results_without_provenance_1000_10000.csv")
@@ -130,11 +130,11 @@ def benchmark(provenance_enable_why_data=False, provenance_enable_how_operator=F
 
     if provenance_enable_why_data:
         assert provenance_enable_why_data != provenance_enable_how_operator, "Normally how and why provenance should not be both enabled"
-        from monkey_patching_v02_data_provenance import set_provenance, enter_provenance_mode_dataop, enter_provenance_mode_var
-        set_provenance(skrub._data_ops._evaluation,"evaluate", provenance_func=enter_provenance_mode_dataop)
+        from monkey_patching_v02_data_provenance import set_provenance, enter_provenance_mode_dataop_callmethod, enter_provenance_mode_var
+        set_provenance(skrub._data_ops._data_ops.CallMethod,"compute", provenance_func=enter_provenance_mode_dataop_callmethod)
         set_provenance(skrub._data_ops._data_ops.Var,"compute", provenance_func=enter_provenance_mode_var)
 
-        CSV_PATH = Path("scaling_results_with_provenance_why_data_1000_10000.csv")
+        CSV_PATH = Path("scaling_results_with_provenance_why_data_19_01_26.csv")
 
 
 
@@ -171,7 +171,7 @@ def benchmark(provenance_enable_why_data=False, provenance_enable_how_operator=F
             print(f"Finished n={n} (averaged over {n_runs} runs)")
 
 if __name__ == "__main__":
-    benchmark(provenance_enable_why_data=False, n_runs=300)
-    benchmark(provenance_enable_why_data=True, n_runs=300)
+    benchmark(provenance_enable_why_data=False, n_runs=3)
+    benchmark(provenance_enable_why_data=True, n_runs=3)
 
 # python -m pipelines.monkey_patching_v02.benchmarking_time_mpv02

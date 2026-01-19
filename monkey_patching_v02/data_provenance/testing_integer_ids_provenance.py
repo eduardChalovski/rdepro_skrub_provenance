@@ -21,7 +21,8 @@ def main_merge():
             how="right",
         )
     )
-    print(joined_right)
+    # joined_right
+    # print(joined_right)
 
 def main_agg():
     import pandas as pd
@@ -35,7 +36,9 @@ def main_agg():
     })
     df_var = skrub.var("main_table", df)
     result_agg = df_var.agg({"population": 'sum'})
-    print(result_agg)
+    print(result_agg.skb.eval())
+
+skrub._data_ops._data_ops.CallMethod.compute
 
 def main_left_merge_agg():
     import pandas as pd
@@ -122,7 +125,6 @@ def main_inner_merge_groupby_agg():
     import pandas as pd
     import numpy as np
     import skrub
-
     df1 = pd.DataFrame({"Country": ["USA", "Italy", "Georgia"]})
     df2 = pd.DataFrame({"Country": ["Italy", "Belgium", "Italy"],
                         "City": ["Palermo", "Brussel", "Rome"],
@@ -141,8 +143,10 @@ def main_inner_merge_groupby_agg():
             how="inner",
         )
     )
+    print("joined")
     print(joined_right)
-    print(joined_right.groupby("Country").agg({"population": 'sum'}))
+    print("aggregated")
+    print(joined_right.groupby("Country").agg({"population": 'sum'}))#.skb.eval())
 
 
 def main_inner_merge_groupby_agg_eval():
@@ -362,6 +366,8 @@ def main_merge_merge_agg4():
     )
 
     print(joined2.agg(lambda s: s.size))
+   
+
 
 def main_inner_merge_groupby_agg_merge():
     import pandas as pd
@@ -707,33 +713,82 @@ def main_logistic_regression():
     print("is_regressor(LogisticRegression())")
     print(is_regressor(LogisticRegression())) 
 
+import skrub._data_ops._data_ops as data_ops
+
 def main():
-    from monkey_patching_v02_data_provenance import set_provenance, enter_provenance_mode_dataop, enter_provenance_mode_var
+    import skrub._data_ops._data_ops as data_ops
 
-    set_provenance(skrub._data_ops._evaluation,"evaluate", provenance_func=enter_provenance_mode_dataop)
-    set_provenance(skrub._data_ops._data_ops.Var,"compute", provenance_func=enter_provenance_mode_var)
+    from pipelines.monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import set_provenance, enter_provenance_mode_dataop_callmethod, enter_provenance_mode_var, enter_provenance_mode_dataop_callmethod_gpt
+    set_provenance(data_ops.Var, "compute", provenance_func=enter_provenance_mode_var)
+
+    # set_provenance(skrub._data_ops._evaluation,"evaluate", provenance_func=enter_provenance_mode_dataop)
+    # set_provenance(skrub._data_ops._data_ops.Var,"compute", provenance_func=enter_provenance_mode_var)
+    # set_provenance(skrub._data_ops._data_ops.CallMethod,"compute", provenance_func=enter_provenance_mode_dataop_callmethod)
+    # set_provenance(skrub._data_ops._evaluation,"evaluate", provenance_func=enter_provenance_mode_dataop_callmethod)
+    # main_inner_merge_groupby_agg()
+    # set_provenance(data_ops.Var, "compute", provenance_func=enter_provenance_mode_var)
+    # Patch CallMethod.compute to intercept 'agg'
+    # set_provenance(data_ops.CallMethod, "compute", provenance_func=enter_provenance_mode_dataop_callmethod)
+    from pipelines.monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import set_provenance_evaluator, enter_provenance_mode_evaluator_eval_data_op, PROVENANCE_MODULE
+    # set_provenance_evaluator(
+    #     _Evaluator,
+    #     "_eval_data_op",
+    #     enter_provenance_mode_evaluator_eval_data_op,
+    # )
+
+    # Import the necessary libraries
+    import skrub
+    from skrub._data_ops._data_ops import CallMethod
+
+    # Apply the monkey patch
+    import functools
+
+    # Save the original compute method so we can call it later
+    # original_compute = CallMethod.compute
+
+    # # Create the monkey-patched compute method
+    # def patched_compute(self, e, mode, environment):
+    #     # Handle preview mode specifically for `CallMethod`
+    #     if mode == "preview":
+    #         # Check if the method being called is 'agg' and inject `_prov`
+    #         if self.method_name == "agg" and self.args:
+    #             agg_args = self.args[0] if isinstance(self.args[0], dict) else {}
+    #             if "_prov" not in agg_args:
+    #                 PROVENANCE_MODULE.provenance_agg(self)
+    #     return original_compute(self, e, mode, environment)
+
+    # CallMethod.compute = patched_compute
+
+    # from skrub._data_ops._evaluation import _Evaluator
+    # from pipelines.monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import set_provenance_evaluator, enter_provenance_mode_evaluator_eval_data_op
+    # set_provenance_evaluator(
+    #     _Evaluator,
+    #     "_eval_data_op",
+    #     enter_provenance_mode_evaluator_eval_data_op,
+    # )
 
 
-    
+
     # main_merge()
-    # main_agg()
+    main_agg()
     # main_left_merge_agg()
     # main_inner_merge_agg()
     # main_left_merge_groupby_agg()
     # main_inner_merge_groupby_agg()
     # main_inner_merge_groupby_agg_eval()
     # main_merge_merge()
-    # main_merge_merge_agg()
-    # main_merge_merge_agg2()
+    main_merge_merge_agg()
+    main_merge_merge_agg2()
     # main_merge_merge_agg3()
     # main_merge_merge_agg4()
-    # main_inner_merge_groupby_agg_merge()
+    # main_inner_merge_groupby_agg()
+    main_inner_merge_groupby_agg_merge()
     # main_merge_tablevectorizer()
 
     # main_dataops_intro_preview()
     # main_dataops_intro_eval()
     # main_logistic_regression()
-    # main_merge_three_estimators()
+    main_merge_three_estimators()
     
     # both not supported
     # main_merge_isin_agg_complex()
@@ -741,7 +796,7 @@ def main():
 
     # main_merge_isin_agg_simpler()
 
-# python .\pipelines\monkey_patching_v02\data_provenance\testing_integer_ids_provenance.py
+# python -m pipelines.monkey_patching_v02.data_provenance.testing_integer_ids_provenance
 
 if __name__ == "__main__":
     main()

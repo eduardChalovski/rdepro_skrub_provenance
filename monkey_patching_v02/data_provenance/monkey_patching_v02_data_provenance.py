@@ -183,8 +183,6 @@ class ProvenanceModule:
         # d["args"] = (agg_dict,)
         # d["kwargs"] = {}
 
-        
-
         # ---- ADD _prov* columns (IN PLACE, FAST) ----
         # cols = list(d["obj"].obj.columns.copy())
         # print("""preview_of_dataop_inside["preview"]""")
@@ -220,8 +218,9 @@ class ProvenanceModule:
             agg_dict = {col: agg_dict for col in cols if not col.startswith("_prov") } #2
 
         # Remove groupby keys from aggregation dict
-        for k in groupby_keys:
-            agg_dict.pop(k, None)
+        if isinstance(object_inside_preview, pd.core.groupby.generic.DataFrameGroupBy):
+            for k in groupby_keys:
+                agg_dict.pop(k, None)
 
         # print("agg_dict")
         # print(agg_dict)
@@ -231,7 +230,7 @@ class ProvenanceModule:
             # startswith is faster than regex
             if c.startswith("_prov"):
                 agg_dict[c] = list #np.array    #TODO: consider tuple instead of list # TODO: but it should be list, list is a transformation and cannot be mixed with aggregation functions due to pandas rules
-
+        
         # print("agg_dict again!")
         # print(agg_dict)
         

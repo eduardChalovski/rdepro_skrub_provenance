@@ -57,8 +57,8 @@ for col in ['total_items', 'total_price', 'total_freight', 'total_payment']:
 # -----------------------------
 # 5. CREATE TARGET
 # -----------------------------
-orders_full['bad_review'] = (orders_full['review_score'] <= 2).astype(int)
-y = orders_full['bad_review']
+orders_full = orders_full.assign(bad_review = (orders_full['review_score'] <= 2).astype(int))
+y = orders_full['bad_review'].skb.mark_as_y()
 
 # -----------------------------
 # 6. FUZZY JOIN PRODUCT INFO
@@ -75,7 +75,7 @@ product_joiner = Joiner(
     max_dist=0.9
 )
 
-first_product_per_order = product_joiner.fit_transform(first_product_per_order)
+first_product_per_order = first_product_per_order.skb.apply(product_joiner)
 
 orders_full = orders_full.merge(
     first_product_per_order[['order_id','product_category_name_product_cat']],
@@ -114,24 +114,38 @@ preprocessor = ColumnTransformer(
     ]
 )
 
-pipeline = Pipeline([
-    ('preproc', preprocessor),
-    ('clf', HistGradientBoostingClassifier(random_state=42))
-])
+#pipeline = Pipeline([
+ #   ('preproc', preprocessor),
+  #  ('clf', HistGradientBoostingClassifier(random_state=42))
+#])
+
+clf = HistGradientBoostingClassifier(random_state=42)
 
 # -----------------------------
 # 10. CROSS-VALIDATE
 # -----------------------------
-X = orders_full[numeric_features + categorical_features]
 
-cv_results = cross_validate(pipeline, X, y, cv=5, return_train_score=True, scoring='roc_auc')
-print(f"Mean ROC AUC: {np.mean(cv_results['test_score']):.3f} ± {np.std(cv_results['test_score']):.3f}")
+Xpre = (orders_full[numeric_features + categorical_features])
+X = Xpre.skb.apply(preprocessor).skb.mark_as_X()
+pipeline = X.skb.apply(clf, y=y)
+learner = pipeline.skb.make_learner(fitted=True)
+
+#cv_results = cross_validate(pipeline, X, y, cv=5, return_train_score=True, scoring='roc_auc')
+#print(f"Mean ROC AUC: {np.mean(cv_results['test_score']):.3f} ± {np.std(cv_results['test_score']):.3f}")
 
 # -----------------------------
 # 11. FIT AND PREDICT
-# -----------------------------
-pipeline.fit(X, y)
-orders_full['bad_review_pred_proba'] = pipeline.predict_proba(X)[:, 1]
+# --------------------------
+# #
+split = pipeline.skb.train_test_split(random_state= 0)
+learner.score(split["test"])
+#pipeline.fit(X, y)
+#orders_full['bad_review_pred_proba'] = 
 
 # Show top 10 most likely bad reviews
-print(orders_full[['order_id','review_score','bad_review_pred_proba']].sort_values('bad_review_pred_proba', ascending=False).head(10))
+
+
+#pred = learner.predict(split["test"])
+values = bad_review_pred_proba = learner.report(environment=split["train"], mode="predict_proba", open=False)["result"]
+print(values)
+#PIPELINE RESULT CAN BE SORTED AND ADJUSTED TO DERRIVE THE LOGICAL CONCLUSION BUT FOR THE PURPOSE OF THE PROJECT IT WORKS

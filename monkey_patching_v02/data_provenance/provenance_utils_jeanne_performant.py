@@ -62,7 +62,7 @@ def with_provenance_integers_shifted(df: pd.DataFrame, table_name: str) -> pd.Da
     df = df.copy()
     table_id = TABLE_REGISTRY.get_id(table_name)
     row_ids = np.arange(len(df), dtype=np.int64)            # TODO: consider using indices instead of len(df)
-    df["_prov"] = (np.int64(table_id) << 48) | row_ids      # pack_prov(table_id, row_id)
+    df["_prov" + str(table_id)] = (np.int64(table_id) << 48) | row_ids      # pack_prov(table_id, row_id)
     return df
 
 

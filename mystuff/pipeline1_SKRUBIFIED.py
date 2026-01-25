@@ -2,6 +2,11 @@
 #REMOVE OUTLIERS
 #“Which customers are likely to generate high future revenue, despite extreme or irregular purchasing behavior?”
 
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
 import pandas as pd
 import numpy as np
 from sklearn.pipeline import make_pipeline
@@ -12,17 +17,23 @@ from sklearn.model_selection import cross_validate
 import skrub
 from sklearn.pipeline import Pipeline
 from skrub import SquashingScaler 
+
+from monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
+enable_why_data_provenance()
 # -------------------------------------------------
 # 1. BUILD CUSTOMER-LEVEL FEATURE TABLE
 # -------------------------------------------------
-customers = skrub.var("customers", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_customers_dataset.csv'))
-orders = skrub.var("orders", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_orders_dataset.csv'))
-order_items = skrub.var("order_items", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_items_dataset.csv'))
-payments = skrub.var("payments",pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
-reviews = skrub.var("reviews",pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_reviews_dataset.csv'))
-order_payments = skrub.var("order_payments", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
-geolocation = skrub.var("geolocation", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_geolocation_dataset.csv'))
+print("Libraries imported")
+base_path = "C:/Users/eduar/Documents/RDEPro_github_clean/rdepro_skrub_provenance/monkey_patching_v02/data_provenance"
+customers = skrub.var("customers", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_customers_dataset.csv'))
+orders = skrub.var("orders", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_orders_dataset.csv'))
+order_items = skrub.var("order_items", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_items_dataset.csv'))
+payments = skrub.var("payments",pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
+reviews = skrub.var("reviews",pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_reviews_dataset.csv'))
+order_payments = skrub.var("order_payments", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
+geolocation = skrub.var("geolocation", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_geolocation_dataset.csv'))
 
+print("Files read, starting the preprocessing")
 # --- 1. Aggregate order items ---
 # order_items columns: ['order_id', 'order_item_id', 'product_id', 'seller_id', 'shipping_limit_date', 'price', 'freight_value']
 order_items_agg = order_items.groupby('order_id').agg(
@@ -61,14 +72,14 @@ customer_features = orders_full.groupby('customer_id').agg(
 
 # --- 5. Merge customer geolocation ---
 # geolocation columns: ['geolocation_zip_code_prefix', 'geolocation_lat', 'geolocation_lng', 'geolocation_city', 'geolocation_state']
-geo_features = customers[['customer_id','customer_zip_code_prefix']].merge(
+geo_features = customers.skb.select(['customer_id','customer_zip_code_prefix']).merge(
     geolocation.drop_duplicates('geolocation_zip_code_prefix'),
     left_on='customer_zip_code_prefix',
     right_on='geolocation_zip_code_prefix',
     how='left'
 )
 customer_features = customer_features.merge(
-    geo_features[['customer_id','geolocation_lat','geolocation_lng','geolocation_city','geolocation_state']],
+    geo_features.skb.select(['customer_id','geolocation_lat','geolocation_lng','geolocation_city','geolocation_state']),
     on='customer_id',
     how='left'
 )
@@ -91,8 +102,10 @@ preprocessor = ColumnTransformer(
 # --- 7. Target variable ---
 # Since you don't have future revenue, we can use 'sum_payment' as a proxy
 y = customer_features['sum_payment'].skb.mark_as_y()
-Xpre = customer_features[numeric_features + categorical_features]
+Xpre = customer_features.skb.select(numeric_features + categorical_features)
 X = (Xpre.skb.apply(preprocessor)).skb.mark_as_X()
+
+print(evaluate_provenance(X))
 # --- 8. Build pipeline ---
 model = HistGradientBoostingRegressor()
 predictor = X.skb.apply(model, y=y)
@@ -100,6 +113,9 @@ predictor = X.skb.apply(model, y=y)
 learner = predictor.skb.make_learner(fitted=True)
 split = predictor.skb.train_test_split(random_state= 0)
 learner.score(split["test"])
+
+pred = learner.predict(split["test"])
+print(pred)   
 
 # --- 9. Cross-validate ---
 #cv_results = cross_validate(learner, X, y, cv=5, return_train_score=True)
@@ -114,5 +130,3 @@ learner.score(split["test"])
 #print(f"R2 score: mean={np.mean(cv_results['test_score']):.3f}, std={np.std(cv_results['test_score']):.3f}")
 #print(f"mean fit time: {np.mean(cv_results['fit_time']):.3f} seconds")
 #print(customer_features[['customer_id', 'predicted_sum_payment']].head(20))
-pred = learner.predict(split["test"])
-print(pred)

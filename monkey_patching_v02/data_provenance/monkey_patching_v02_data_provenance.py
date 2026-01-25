@@ -404,31 +404,55 @@ def enter_provenance_mode_dataop(func):
                 if is_regressor(est) or is_classifier(est) or is_outlier_detector(est):
                     # print("one of them is XGB")
                     # print("this one: ", est)
+                    # print(final_dict)
+                    # print(final_dict.keys())
+                    
                     dataop_X_dict = get_dataop_dictionary(final_dict["X"])
+
                     preview  = dataop_X_dict["results"]["preview"]
+                    prov_cols = [col for col in preview.columns if col.startswith("_prov")]
+                    # print("before final_dict['X']")
+                    # print(final_dict["X"])
+                    final_dict["X"] = final_dict["X"].drop(columns= prov_cols)
+                    # print("after adjustment final_dict['X']")
+                    # print(final_dict["X"])
+                    
+                    # print("maybe there is something else in dataopX_dict")
+                    # print("#"*80)
+                    # print(dataop_X_dict)
+                    # print("#"*80)
 
-                    X_prov = s.select(preview, PROV_SELECTOR)
-                    X_main = s.select(preview, final_dict["cols"] - PROV_SELECTOR)
-
-                    # mutate preview before estimator runs
-                    dataop_X_dict["results"]["preview"] = X_main
-
+                    # print("maybe preview is not used?")
+                    # print(preview)
+                    # prov_cols = [col for col in preview.columns if col.startswith("_prov")]
+                    # for pcol in prov_cols:
+                    #     print(pcol)
+                    # X_prov = s.select(preview, PROV_SELECTOR)
+                    # X_main = s.select(preview, final_dict["cols"] - PROV_SELECTOR)
+                    # print("#"*80)
+                    # print("Apparently this dataframe contains lists of lists")
+                    
+                    # # mutate preview before estimator runs
+                    # dataop_X_dict["results"]["preview"] = X_main
+                    # dataop_X_dict["results"]["value"] = X_main
+                    
                     result = func(*args, **kwargs)
 
-                    X_out = pd.concat([result, X_prov], axis=1)
 
-                    # update Apply DataOp result (this is the critical part for propagation)
-                    set_dataop_dictionary_val(
-                        a_dataop=result_dataop,
-                        attribute_name="results",
-                        new_val={
-                            **final_dict["results"],
-                            "value": X_out,
-                            "preview": X_out,
-                        }
-                    )
+                    # X_out = pd.concat([result, X_prov], axis=1)
 
-                    return X_out
+                    # # update Apply DataOp result (this is the critical part for propagation)
+                    # set_dataop_dictionary_val(
+                    #     a_dataop=result_dataop,
+                    #     attribute_name="results",
+                    #     new_val={
+                    #         **final_dict["results"],
+                    #         "value": result,
+                    #         "preview": result,
+                    #     }
+                    # )
+
+                    return result
                 elif isinstance(est, skrub._select_cols.SelectCols):                    
                     final_dict["estimator"].__dict__["cols"] = final_dict["estimator"].__dict__["cols"] | PROV_SELECTOR
 
@@ -685,36 +709,36 @@ def set_provenance(namespace, name_of_the_function, provenance_func=enter_proven
 
 # region enable_provenance
 def enable_why_data_provenance():
-    from monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import set_provenance, enter_provenance_mode_dataop, enter_provenance_mode_var
     set_provenance(skrub._data_ops._evaluation,"evaluate", provenance_func=enter_provenance_mode_dataop)
     set_provenance(skrub._data_ops._data_ops.Var,"compute", provenance_func=enter_provenance_mode_var)
 
 
-    from functools import wraps
-    def enter_skrub_learner_provenance(func):
-        @wraps(func)
-        def wrapper(*args,**kwargs):
+    # from functools import wraps
+    # def enter_skrub_learner_provenance(func):
+    #     @wraps(func)
+    #     def wrapper(*args,**kwargs):
             
-            # print("we are here")
-            # print("arguemnts")
-            for arg in args:
-                # print(arg)
-                # print()
-                if isinstance(arg, dict):
-                    # print("In the following dataframe, the _prov columns should be dropped")
-                    # print(arg['_skrub_X'])
-                    if "_skrub_X" in arg.keys():
-                        arg['_skrub_X'] = arg['_skrub_X'].drop(columns=[col for col in arg['_skrub_X'].columns if col.startswith("_prov")])
-            result = func(*args,**kwargs)
+    #         print("we are here")
+    #         print("arguemnts")
+    #         print(args)
+    #         for arg in args[1:]:
+    #             print(arg)
+    #             print()
+    #             if isinstance(arg, dict):
+    #         #         pass
+    #                 print("In the following dataframe, the _prov columns should be dropped")
+    #                 # print(arg['_skrub_X'])
+    #                 # if "_skrub_X" in arg.keys():
+    #                 #     arg['_skrub_X'] = arg['_skrub_X'].drop(columns=[col for col in arg['_skrub_X'].columns if col.startswith("_prov")])
+    #         # result = func(*args,**kwargs)
             
-            # TODO: maybe reattach _prov cols to arg later
-            # print("result is ", result)
+    #         # TODO: maybe reattach _prov cols to arg later
+    #         # print("result is ", result)
 
-            return result # Just execute the function and get the result
-        return wrapper
+    #         return func(*args,**kwargs) # Just execute the function and get the result
+    #     return wrapper
 
-
-    set_provenance(skrub._data_ops._estimator.SkrubLearner, "_eval_in_mode", enter_skrub_learner_provenance)
+    # set_provenance(skrub._data_ops._estimator.SkrubLearner, "_eval_in_mode", enter_skrub_learner_provenance)
 
 
 import math
@@ -725,6 +749,20 @@ def normalize_cell(x):
     if x is None or (isinstance(x, float) and math.isnan(x)):
         return []
     return [x]
+
+def show_provenance(df_with_many_prov_cols):
+    """
+    Receives a pandas dataframe with multiple _prov* cols 
+    -> returns pd.DataFrame with one _prov column which is a set of all _prov* values
+    
+    :param df_with_many_prov_cols: pd.DataFrame with _prov column(s) or a skrub.DataOp
+    """
+    if isinstance(df_with_many_prov_cols, skrub.DataOp):
+        df_with_many_prov_cols = df_with_many_prov_cols.skb.preview()
+
+    prov_cols = [col for col in df_with_many_prov_cols.columns if col.startswith("_prov")] 
+    return df_with_many_prov_cols[prov_cols]
+
 
 # region evaluate_provenance
 def evaluate_provenance(df_with_many_prov_cols):
@@ -767,6 +805,38 @@ def evaluate_provenance(df_with_many_prov_cols):
     )
 
     return df_with_many_prov_cols.drop(columns=prov_cols).join(result_prov)
+
+
+from collections.abc import Iterable
+
+def flatten(x):
+    if isinstance(x, list):
+        for item in x:
+            yield from flatten(item)
+    elif x is not None:
+        yield x
+
+def evaluate_provenance_fast(df):
+    if isinstance(df, skrub.DataOp):
+        df = df.skb.preview()
+
+    prov_cols = [c for c in df.columns if c.startswith("_prov")]
+
+    prov_series = (
+        df[prov_cols]
+        .apply(
+            lambda row: {
+                int(v)
+                for cell in row
+                for v in flatten(cell)
+            },
+            axis=1
+        )
+        .rename("_prov")
+    )
+
+    return df.drop(columns=prov_cols).join(prov_series)
+
 # region checklist of functions
 # To adapt more functions take a look at:
 # https://skrub-data.org/stable/reference/index.html+-

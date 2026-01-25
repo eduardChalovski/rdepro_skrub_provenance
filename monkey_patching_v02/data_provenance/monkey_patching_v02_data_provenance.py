@@ -683,6 +683,7 @@ def set_provenance(namespace, name_of_the_function, provenance_func=enter_proven
     # print(f"Set provenance for {name}")
 
 
+# region enable_provenance
 def enable_why_data_provenance():
     from monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import set_provenance, enter_provenance_mode_dataop, enter_provenance_mode_var
     set_provenance(skrub._data_ops._evaluation,"evaluate", provenance_func=enter_provenance_mode_dataop)
@@ -715,6 +716,57 @@ def enable_why_data_provenance():
 
     set_provenance(skrub._data_ops._estimator.SkrubLearner, "_eval_in_mode", enter_skrub_learner_provenance)
 
+
+import math
+
+def normalize_cell(x):
+    if isinstance(x, list):
+        return x
+    if x is None or (isinstance(x, float) and math.isnan(x)):
+        return []
+    return [x]
+
+# region evaluate_provenance
+def evaluate_provenance(df_with_many_prov_cols):
+    """
+    Receives a pandas dataframe with multiple _prov* cols 
+    -> returns pd.DataFrame with one _prov column which is a set of all _prov* values
+    
+    :param df_with_many_prov_cols: pd.DataFrame with _prov column(s) or a skrub.DataOp
+    """
+    if isinstance(df_with_many_prov_cols, skrub.DataOp):
+        df_with_many_prov_cols = df_with_many_prov_cols.skb.preview()
+
+    prov_cols = [col for col in df_with_many_prov_cols.columns if col.startswith("_prov")] 
+    
+    prov = df_with_many_prov_cols[prov_cols].map(normalize_cell)
+    for col in prov_cols:
+        while prov[col].map(lambda x: isinstance(x, list)).any():
+            prov = prov.explode(col)
+
+    # print("exploded prov")
+    # print(prov)
+
+    flat = (
+        prov
+        .stack()
+        .dropna()
+    )
+    # print()
+    # print("flat")
+    # print()
+    # print(flat)
+
+    flat = flat.astype(float).astype(int)
+
+    result_prov = (
+        flat
+        .groupby(level=0)
+        .agg(set)
+        .rename("_prov")
+    )
+
+    return df_with_many_prov_cols.drop(columns=prov_cols).join(result_prov)
 # region checklist of functions
 # To adapt more functions take a look at:
 # https://skrub-data.org/stable/reference/index.html+-

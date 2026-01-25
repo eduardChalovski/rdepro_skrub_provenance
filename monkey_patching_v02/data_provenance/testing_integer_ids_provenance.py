@@ -2,7 +2,9 @@
 import skrub
 import pandas as pd
 
-# python .\pipelines\monkey_patching_v02\data_provenance\testing_integer_ids_provenance.py
+# python -m monkey_patching_v02.data_provenance.testing_integer_ids_provenance
+
+from monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import evaluate_provenance
 
 def main_merge():
     df1 = pd.DataFrame({"Country": ["USA", "Italy", "Georgia"]})
@@ -22,6 +24,13 @@ def main_merge():
         )
     )
     print(joined_right)
+    print("#"*80)
+    print("evaluate_provenance(joined_right)")
+    print(evaluate_provenance(joined_right.skb.preview()))
+    print()
+    print("now by passing a dataop")
+    print()
+    print(evaluate_provenance(joined_right))
 
 def main_agg():
     import pandas as pd
@@ -570,15 +579,23 @@ def main_merge_isin_agg_complex():
     ]
 
     # ---- aggregation after isin ----
-    raise NotImplementedError("""The solution for agg does not support specification of parameters in this way 
-       .agg(total_population=("population", "sum"),
-        city_count=("City", "nunique"))""")
+    # raise NotImplementedError("""The solution for agg does not support specification of parameters in this way 
+    #    .agg(total_population=("population", "sum"),
+    #     city_count=("City", "nunique"))""")
     result = filtered.agg(
         total_population=("population", "sum"),
         city_count=("City", "nunique"),
     )
 
     print(result)
+    print("#"*80)
+    print("now with the evaluated prov_column")
+    print(evaluate_provenance(result.skb.preview()))
+
+    print()
+    print("now by passing a dataop")
+    print()
+    print(evaluate_provenance(result))
 
 
 def main_merge_isin_agg_complex2():
@@ -708,14 +725,12 @@ def main_logistic_regression():
     print(is_regressor(LogisticRegression())) 
 
 def main():
-    from monkey_patching_v02_data_provenance import set_provenance, enter_provenance_mode_dataop, enter_provenance_mode_var
-
-    set_provenance(skrub._data_ops._evaluation,"evaluate", provenance_func=enter_provenance_mode_dataop)
-    set_provenance(skrub._data_ops._data_ops.Var,"compute", provenance_func=enter_provenance_mode_var)
+    from monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance
+    enable_why_data_provenance()
 
 
     
-    # main_merge()
+    main_merge()
     # main_agg()
     # main_left_merge_agg()
     # main_inner_merge_agg()
@@ -736,12 +751,12 @@ def main():
     # main_merge_three_estimators()
     
     # both not supported
-    # main_merge_isin_agg_complex()
+    main_merge_isin_agg_complex()
     # main_merge_isin_agg_complex2()
 
     # main_merge_isin_agg_simpler()
 
-# python .\pipelines\monkey_patching_v02\data_provenance\testing_integer_ids_provenance.py
+# python -m monkey_patching_v02.data_provenance.testing_integer_ids_provenance
 
 if __name__ == "__main__":
     main()

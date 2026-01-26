@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+import skrub
 from skrub import deduplicate
 from skrub import TableVectorizer
 
@@ -36,6 +36,7 @@ products = pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/mo
 
 # --- Detect categorical columns ---
 # We'll consider object dtype columns as categorical
+df = df.sample(frac=0.01)
 categorical_cols = df.select_dtypes(include=["object"]).columns.tolist()
 print("Detected categorical columns:", categorical_cols)
 
@@ -45,29 +46,21 @@ safe_categorical_cols = [
     if ("_id" not in col.lower()) and ("date" not in col.lower()) and ("timestamp" not in col.lower())
 ]
 print("Columns safe to deduplicate:", safe_categorical_cols)
-
+df_skrub = skrub.var("DF_skrub", df)
+i = 0
+while i < len(safe_categorical_cols):
+    collumn = safe_categorical_cols[i]
+    print(collumn)
+    df_skrub.assign(collumn = df[safe_categorical_cols[i]])
+    df_skrub[safe_categorical_cols[i]].skb.apply_func(deduplicate)
+    print(df_skrub)
+    i = i + 1
+print(df_skrub)
 # --- Deduplicate safe categorical columns ---
-for col in ['geolocation_city', 'geolocation_state']:
-    print(f"Deduplicating column: {col}")
-    
-    # Optionally, show number of unique values before dedupe
-    unique_before = df[col].nunique()
-    print(f"Unique values before dedupe: {unique_before}")
-    print(len(df[col]))
-    # Run deduplication
-    cleaned = deduplicate(df[col])
-    
-    # Show number of unique values after dedupe
-    unique_after = pd.Series(cleaned).nunique()
-    print(f"Unique values after dedupe: {unique_after}\n")
-    
-    # Assign back to dataframe
-    df[col + "_cleaned"] = cleaned
 
-# --- Check results ---
-for col in safe_categorical_cols:
-    print(f"\nOriginal unique values in '{col}':", df[col].nunique())
-    print(f"Deduplicated unique values in '{col}_cleaned':", df[col + "_cleaned"].nunique())
+    
+   
+
 
 # --- Optional: Save cleaned DataFrame ---
 # df.to_csv("cleaned_dataset.csv", index=False)

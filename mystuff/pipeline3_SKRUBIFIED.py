@@ -36,26 +36,30 @@ products = pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/mo
 
 # --- Detect categorical columns ---
 # We'll consider object dtype columns as categorical
-df = df.sample(frac=0.01)
+df = df.sample(frac=0.001)
 categorical_cols = df.select_dtypes(include=["object"]).columns.tolist()
-print("Detected categorical columns:", categorical_cols)
+#print("Detected categorical columns:", categorical_cols)
 
 # --- Exclude ID and timestamp columns ---
 safe_categorical_cols = [
     col for col in categorical_cols
     if ("_id" not in col.lower()) and ("date" not in col.lower()) and ("timestamp" not in col.lower())
 ]
-print("Columns safe to deduplicate:", safe_categorical_cols)
+#print("Columns safe to deduplicate:", safe_categorical_cols)
 df_skrub = skrub.var("DF_skrub", df)
 i = 0
+unique_examples = []
 while i < len(safe_categorical_cols):
     collumn = safe_categorical_cols[i]
-    print(collumn)
     df_skrub.assign(collumn = df[safe_categorical_cols[i]])
-    df_skrub[safe_categorical_cols[i]].skb.apply_func(deduplicate)
-    print(df_skrub)
+    deduplicated_data = df_skrub[safe_categorical_cols[i]].skb.apply_func(deduplicate)
+    unique_examples.append(deduplicated_data)
     i = i + 1
-print(df_skrub)
+print("DEDUPLICATED VALUES")
+print(unique_examples)
+#SOMEONE CAN USE THIS DEDUPLICATED DATA TO CREATE HEATMAPS AND SO ON AND SO FORTH
+
+
 # --- Deduplicate safe categorical columns ---
 
     

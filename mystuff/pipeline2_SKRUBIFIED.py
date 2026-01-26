@@ -126,6 +126,11 @@ clf = HistGradientBoostingClassifier(random_state=42)
 # -----------------------------
 
 Xpre = (orders_full[numeric_features + categorical_features])
+import pickle
+
+# Assuming df_skrub or your final DataFrame is what you want to check
+with open("output.pkl", "wb") as f:
+    pickle.dump(orders_full, f)
 X = Xpre.skb.apply(preprocessor).skb.mark_as_X()
 pipeline = X.skb.apply(clf, y=y)
 learner = pipeline.skb.make_learner(fitted=True)

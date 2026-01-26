@@ -12,16 +12,17 @@ from sklearn.model_selection import cross_validate
 import skrub
 from sklearn.pipeline import Pipeline
 from skrub import SquashingScaler 
+import uuid
 # -------------------------------------------------
 # 1. BUILD CUSTOMER-LEVEL FEATURE TABLE
 # -------------------------------------------------
-customers = skrub.var("customers", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_customers_dataset.csv'))
-orders = skrub.var("orders", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_orders_dataset.csv'))
-order_items = skrub.var("order_items", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_items_dataset.csv'))
-payments = skrub.var("payments",pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
-reviews = skrub.var("reviews",pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_reviews_dataset.csv'))
-order_payments = skrub.var("order_payments", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
-geolocation = skrub.var("geolocation", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_geolocation_dataset.csv'))
+customers = skrub.var(f"customers_{uuid.uuid4().hex}", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_customers_dataset.csv'))
+orders = skrub.var(f"orders_{uuid.uuid4().hex}", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_orders_dataset.csv'))
+order_items = skrub.var(f"order_items_{uuid.uuid4().hex}", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_items_dataset.csv'))
+payments = skrub.var(f"payments_{uuid.uuid4().hex}",pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
+reviews = skrub.var(f"reviews_{uuid.uuid4().hex}",pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_reviews_dataset.csv'))
+order_payments = skrub.var(f"order_payments-{uuid.uuid4().hex}", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
+geolocation = skrub.var(f"geolocation_{uuid.uuid4().hex}", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_geolocation_dataset.csv'))
 
 # --- 1. Aggregate order items ---
 # order_items columns: ['order_id', 'order_item_id', 'product_id', 'seller_id', 'shipping_limit_date', 'price', 'freight_value']
@@ -90,9 +91,11 @@ preprocessor = ColumnTransformer(
 
 # --- 7. Target variable ---
 # Since you don't have future revenue, we can use 'sum_payment' as a proxy
+
 y = customer_features['sum_payment'].skb.mark_as_y()
 Xpre = customer_features[numeric_features + categorical_features]
 X = (Xpre.skb.apply(preprocessor)).skb.mark_as_X()
+
 # --- 8. Build pipeline ---
 model = HistGradientBoostingRegressor()
 predictor = X.skb.apply(model, y=y)
@@ -116,3 +119,8 @@ learner.score(split["test"])
 #print(customer_features[['customer_id', 'predicted_sum_payment']].head(20))
 pred = learner.predict(split["test"])
 print(pred)
+import pickle
+
+# Assuming df_skrub or your final DataFrame is what you want to check
+with open("output.pkl", "wb") as f:
+    pickle.dump(customer_features, f)

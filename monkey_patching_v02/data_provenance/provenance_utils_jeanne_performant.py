@@ -79,6 +79,45 @@ def decode_prov(prov):
 
 
 
+def decode_prov_column(df, evaluate_provenance_first=True):
+    """
+    Decode 64-bit integer provenance IDs into a human-readable format.
+
+    This function transforms the values in the ``"_prov"`` column from
+    encoded 64-bit integers into the form::
+
+        table_name:row_id
+
+    It should be applied **after** provenance columns have been evaluated
+    and consolidated into a single ``"_prov"`` column.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        A DataFrame containing a ``"_prov"`` column with encoded provenance IDs.
+
+    evaluate_provenance_first : bool
+        If True, all ``_prov*`` columns are evaluated and consolidated into a
+        single ``"_prov"`` column prior to decoding. If False, the function
+        assumes that a ``"_prov"`` column already exists.
+        
+    Returns
+    -------
+    pandas.DataFrame
+        A copy of the input DataFrame with decoded, more interpretable
+        provenance identifiers.
+    """
+    
+    new_df = df.copy()
+
+
+    if evaluate_provenance_first:
+        from monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import evaluate_provenance_fast
+        new_df = evaluate_provenance_fast(new_df) 
+
+    new_df["_prov"] = new_df["_prov"].map(lambda set_x: [decode_prov(x) for x in set_x])
+    return new_df
+
 
 #region Helpers
 

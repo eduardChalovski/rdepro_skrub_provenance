@@ -303,11 +303,32 @@ def flatten(x):
     elif x is not None:
         yield x
 
+def _is_prov_col(col) -> bool:
+    if isinstance(col, str):
+        return col.startswith("_prov")
+    if isinstance(col, tuple) and len(col) > 0 and isinstance(col[0], str):
+        return col[0].startswith("_prov")
+    return False
+
+def _make_prov_column(df, prov_series):
+ 
+    if df.columns.nlevels == 1:
+        return df.join(prov_series)
+    prov_df = prov_series.to_frame()
+    new_cols = pd.MultiIndex.from_tuples(
+        [("_prov",) + ("",) * (df.columns.nlevels - 1)]
+    )
+    prov_df.columns = new_cols
+
+    return pd.concat([df, prov_df], axis=1)
+
+
+
 def evaluate_provenance_fast(df):
     if isinstance(df, skrub.DataOp):
         df = df.skb.preview()
 
-    prov_cols = [c for c in df.columns if c.startswith("_prov")]
+    prov_cols = [c for c in df.columns if _is_prov_col(c)]
 
     prov_series = (
         df[prov_cols]
@@ -323,7 +344,9 @@ def evaluate_provenance_fast(df):
         .rename("_prov")
     )
 
-    return df.drop(columns=prov_cols).join(prov_series)
+    base = df.drop(columns=prov_cols)
+    return _make_prov_column(base, prov_series)
+
 
 
 def decode_prov_column(df, evaluate_provenance_first=True):

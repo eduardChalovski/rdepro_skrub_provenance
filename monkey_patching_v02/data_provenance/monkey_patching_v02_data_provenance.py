@@ -52,9 +52,6 @@ def export_hashdict_to_excel(hashdict, path="provenance_overview_debugging.xlsx"
         index_df = pd.DataFrame(index_rows)
         index_df.to_excel(writer, sheet_name="index", index=False)
 
-
-import numpy as np
-
 # region ProvenanceModule
 class ProvenanceModule:
     # Pseudo code: hashdict = new hashdict() # a key is a hash and its value is a tuple (name_of_the_df, df_with_provenance_column) 
@@ -63,6 +60,7 @@ class ProvenanceModule:
         # value -> (df_name, pandas_df_with_provenance)
         # maybe there is a more optimized dictionary?
         self.hashdict: dict[int, pd.DataFrame] = {}         # TODO: consider using numpy arrays instead
+        self.agg_func_over_prov_cols = list
     
     # def store_provenance_of_the_dataop(self, a_dataop, underlying_df):
     #     self.hashdict[dataop_key(a_dataop)] = underlying_df
@@ -153,6 +151,9 @@ class ProvenanceModule:
         # region implement for agrs and kwargs
         # return df_name, underlying_df
         return a_dataop
+    
+    
+
 
     # region override agg
     def provenance_agg(self,a_dataop):
@@ -212,7 +213,7 @@ class ProvenanceModule:
 
         if isinstance(agg_dict, str) or callable(agg_dict):
             # apply to all columns
-            agg_dict = {col: agg_dict if not col.startswith("_prov") else list for col in cols } #1
+            agg_dict = {col: agg_dict if not col.startswith("_prov") else self.agg_func_over_prov_cols for col in cols } #1
             if isinstance(object_inside_preview, pd.core.groupby.generic.DataFrameGroupBy):
                 for k in groupby_keys:
                     agg_dict.pop(k, None)
@@ -223,7 +224,7 @@ class ProvenanceModule:
             return a_dataop
 
         elif isinstance(agg_dict, list):
-            agg_dict = {col: agg_dict if not col.startswith("_prov") else list for col in cols} #2
+            agg_dict = {col: agg_dict if not col.startswith("_prov") else self.agg_func_over_prov_cols for col in cols} #2
             if isinstance(object_inside_preview, pd.core.groupby.generic.DataFrameGroupBy):
                 for k in groupby_keys:
                     agg_dict.pop(k, None)
@@ -241,16 +242,19 @@ class ProvenanceModule:
                 # print("agg_dict values are tuples (named aggregation style)")
                 # example: {'new_col': ('old_col', 'max')}
                 # or also (new_col_name = ('old_col', 'max'))
+                # _prov0 = ("_prov0", list)
+                # {}
                 for col in cols:
                     if col.startswith("_prov"):
-                        agg_dict[col] = (col, list)
+                        agg_dict[col] = (col, self.agg_func_over_prov_cols) # TODO: consider instead maybe slower but solves many issues prov_reduce_fast
                 d["kwargs"] = agg_dict
+                print(agg_dict)
                 return a_dataop       
             else:
                 # example: {'col_name':'max'}
                 for col in cols:
                     if col.startswith("_prov"):
-                        agg_dict[col] = list
+                        agg_dict[col] = self.agg_func_over_prov_cols
                 
         #TODO: consider tuple instead of list # TODO: but it should be list, list is a transformation and cannot be mixed with aggregation functions due to pandas rules
         
@@ -707,11 +711,61 @@ def set_provenance(namespace, name_of_the_function, provenance_func=enter_proven
     # print(f"Set provenance for {name}")
 
 
+
+# def prov_reduce_fast(values):
+#         out = set()
+#         for v in values:
+#             if isinstance(v, (list, tuple, set)):
+#                 out.update(v)
+#             else:
+#                 out.add(v)
+#         return out
+
+def set_reduce(values):
+    # If pandas gives us a 1-column DataFrame, unwrap it
+    if isinstance(values, pd.DataFrame):
+        values = values.iloc[:, 0]
+
+    out = set()
+    for v in values:
+        if isinstance(v, (set, list, tuple)):
+            out.update(v)
+        else:
+            out.add(v)
+    return out
+
+
+def list_reduce(values):
+    # If pandas gives us a 1-column DataFrame, unwrap it
+    if isinstance(values, pd.DataFrame):
+        values = values.iloc[:, 0]
+
+    out = []
+    append = out.append
+    extend = out.extend
+
+    for v in values:
+        if isinstance(v, (list, tuple, set)):
+            extend(v)
+        else:
+            append(v)
+
+    return out
+
 # region enable_provenance
-def enable_why_data_provenance():
+def enable_why_data_provenance(agg_func_over_prov_cols=list):
     set_provenance(skrub._data_ops._evaluation,"evaluate", provenance_func=enter_provenance_mode_dataop)
     set_provenance(skrub._data_ops._data_ops.Var,"compute", provenance_func=enter_provenance_mode_var)
+    
+    if agg_func_over_prov_cols == "list_reduce":
+        PROVENANCE_MODULE.agg_func_over_prov_cols = list_reduce
+    elif agg_func_over_prov_cols == "set_reduce":
+        PROVENANCE_MODULE.agg_func_over_prov_cols = set_reduce
+    else:
+        PROVENANCE_MODULE.agg_func_over_prov_cols = agg_func_over_prov_cols
 
+
+    
 
     # from functools import wraps
     # def enter_skrub_learner_provenance(func):
@@ -837,45 +891,6 @@ def evaluate_provenance_fast(df):
     )
 
     return df.drop(columns=prov_cols).join(prov_series)
-
-from provenance_utils_jeanne_performant import decode_prov
-
-def decode_prov_column(df, evaluate_provenance_first=True):
-    """
-    Decode 64-bit integer provenance IDs into a human-readable format.
-
-    This function transforms the values in the ``"_prov"`` column from
-    encoded 64-bit integers into the form::
-
-        table_name:row_id
-
-    It should be applied **after** provenance columns have been evaluated
-    and consolidated into a single ``"_prov"`` column.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        A DataFrame containing a ``"_prov"`` column with encoded provenance IDs.
-
-    evaluate_provenance_first : bool
-        If True, all ``_prov*`` columns are evaluated and consolidated into a
-        single ``"_prov"`` column prior to decoding. If False, the function
-        assumes that a ``"_prov"`` column already exists.
-        
-    Returns
-    -------
-    pandas.DataFrame
-        A copy of the input DataFrame with decoded, more interpretable
-        provenance identifiers.
-    """
-    new_df = df.copy()
-
-
-    if evaluate_provenance_first:
-        new_df = evaluate_provenance_fast(new_df) 
-
-    new_df["_prov"] = new_df["_prov"].map(lambda set_x: [decode_prov(x) for x in set_x])
-    return new_df
 
 # region checklist of functions
 # To adapt more functions take a look at:

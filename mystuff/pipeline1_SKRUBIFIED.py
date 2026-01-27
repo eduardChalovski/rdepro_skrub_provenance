@@ -39,7 +39,7 @@ print("Files read, starting the preprocessing")
 order_items_agg = order_items.groupby('order_id').agg(
     total_items=('order_item_id', 'count'),
     total_price=('price', 'sum'),
-    total_freight=('freight_value', 'sum')
+    total_freight=('freight_value', 'sum'),
 ).reset_index()
 
 # --- 2. Aggregate order payments ---
@@ -105,7 +105,6 @@ y = customer_features['sum_payment'].skb.mark_as_y()
 Xpre = customer_features.skb.select(numeric_features + categorical_features)
 X = (Xpre.skb.apply(preprocessor)).skb.mark_as_X()
 
-print(evaluate_provenance(X))
 # --- 8. Build pipeline ---
 model = HistGradientBoostingRegressor()
 predictor = X.skb.apply(model, y=y)
@@ -130,3 +129,6 @@ print(pred)
 #print(f"R2 score: mean={np.mean(cv_results['test_score']):.3f}, std={np.std(cv_results['test_score']):.3f}")
 #print(f"mean fit time: {np.mean(cv_results['fit_time']):.3f} seconds")
 #print(customer_features[['customer_id', 'predicted_sum_payment']].head(20))
+import pickle
+with open("output.pkl", "wb") as f:
+    pickle.dump(customer_features, f)

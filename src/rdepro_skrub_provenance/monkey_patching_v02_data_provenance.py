@@ -166,23 +166,33 @@ def enter_provenance_mode_dataop(func):
 
             elif "estimator" in final_dict:
                 est = final_dict["estimator"]
-                if is_regressor(est) or is_classifier(est) or is_outlier_detector(est):
-                    
+                if final_dict.get("y", None) is not None:
                     dataop_X_dict = get_dataop_dictionary(final_dict["X"])
+                    preview = dataop_X_dict["results"]["preview"]
+                    prov_cols = [col for col in preview.columns if str(col).startswith("_prov")]
 
-                    preview  = dataop_X_dict["results"]["preview"]
-                    prov_cols = [col for col in preview.columns if col.startswith("_prov")]
-        
-                    final_dict["X"] = final_dict["X"].drop(columns= prov_cols)          
-                    result = func(*args, **kwargs)
-                    return result
-                elif isinstance(est, skrub._select_cols.SelectCols):                    
+                    if prov_cols:
+                        final_dict["X"] = final_dict["X"].drop(columns=prov_cols)
+
+                    return func(*args, **kwargs)
+
+                if is_regressor(est) or is_classifier(est) or is_outlier_detector(est):
+                    dataop_X_dict = get_dataop_dictionary(final_dict["X"])
+                    preview = dataop_X_dict["results"]["preview"]
+                    prov_cols = [col for col in preview.columns if str(col).startswith("_prov")]
+                    if prov_cols:
+                        final_dict["X"] = final_dict["X"].drop(columns=prov_cols)
+                    return func(*args, **kwargs)
+
+                if isinstance(est, skrub._select_cols.SelectCols):
                     final_dict["estimator"].__dict__["cols"] = final_dict["estimator"].__dict__["cols"] | PROV_SELECTOR
                 else:
-                    set_dataop_dictionary_val(a_dataop=result_dataop,
-                                              attribute_name="cols",
-                                              new_val=final_dict["cols"] - PROV_SELECTOR)
-            
+                    set_dataop_dictionary_val(
+                        a_dataop=result_dataop,
+                        attribute_name="cols",
+                        new_val=final_dict["cols"] - PROV_SELECTOR
+                    )
+   
             elif "attr_name" in final_dict:
                 # TODO: introduce provenance, if one column is selected -> attach to it all prov_cols -> risky if for example ApplyToCols takes one column and gets a dataframe..
                 pass

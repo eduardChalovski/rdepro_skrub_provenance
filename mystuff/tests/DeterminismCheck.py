@@ -3,6 +3,7 @@ import subprocess
 import sys
 import os
 import pickle
+import pytest
 from deepdiff import DeepDiff
 # The script you want to test
 SCRIPT = "C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/mystuff/pipeline2_SKRUBIFIED.py"
@@ -23,18 +24,12 @@ def run_script():
         data = pickle.load(f)
     return data
 
-if __name__ == "__main__":
-    print("Running first execution...")
+ 
+def test_pipeline_is_deterministic():
+    print("wry")
     out1 = run_script()
-    print("Running second execution...")
     out2 = run_script()
-    # Compare outputs
-# Evaluate the DataOps to get pandas DataFrames
+    print("blegh")
     df1 = out1.skb.eval()  # or .preview() for a small sample
     df2 = out2.skb.eval()
-
-# Compare the actual data
-    if df1.equals(df2):
-        print("✅ Deterministic: outputs are identical")
-    else:
-        print("❌ Non-deterministic: outputs differ")
+    assert df1.equals(df2), "Pipeline output is non-deterministic"

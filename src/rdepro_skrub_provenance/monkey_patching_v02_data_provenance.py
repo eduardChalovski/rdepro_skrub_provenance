@@ -217,10 +217,15 @@ def enter_provenance_mode_var(func):
     return wrapper
 
 def set_provenance(namespace, name_of_the_function, provenance_func=enter_provenance_mode_dataop):
-    skrub_eval_namespace = namespace
-    name = name_of_the_function
-    skrub_eval = getattr(skrub_eval_namespace,name,None)
-    setattr(skrub_eval_namespace, name, provenance_func(skrub_eval))
+    current = getattr(namespace, name_of_the_function, None)
+    if current is None:
+        raise AttributeError(f"{namespace}.{name_of_the_function} not found")
+    if getattr(current, "__provenance_patch__", False):
+        return
+    wrapped = provenance_func(current)
+    setattr(wrapped, "__provenance_patch__", True)
+    setattr(namespace, name_of_the_function, wrapped)
+
 
 
 

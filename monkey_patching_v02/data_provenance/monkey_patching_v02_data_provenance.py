@@ -243,7 +243,6 @@ class ProvenanceModule:
                 # example: {'new_col': ('old_col', 'max')}
                 # or also (new_col_name = ('old_col', 'max'))
                 # _prov0 = ("_prov0", list)
-                # {}
                 for col in cols:
                     if col.startswith("_prov"):
                         agg_dict[col] = (col, self.agg_func_over_prov_cols) # TODO: consider instead maybe slower but solves many issues prov_reduce_fast

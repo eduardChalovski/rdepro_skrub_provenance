@@ -92,17 +92,20 @@ text_encoder = TextEncoder(
 vectorizerText = TableVectorizer(high_cardinality= text_encoder)
 
 
-gapPipe = X.skb.apply(vectorizerGap).skb.apply( HistGradientBoostingClassifier(
+gapPipe = X.skb.apply(vectorizerGap)
+gapPipe = gapPipe.skb.apply( HistGradientBoostingClassifier(
         max_depth=6,
         learning_rate=0.05,
         random_state=0,
     ), y = y)
-hashPipe = X.skb.apply(vectorizerHash).skb.apply( HistGradientBoostingClassifier(
+hashPipe = X.skb.apply(vectorizerHash)
+hashPipe = hashPipe.skb.apply( HistGradientBoostingClassifier(
         max_depth=6,
         learning_rate=0.05,
         random_state=0,
     ), y = y)
-textPipe = X.skb.apply(vectorizerText).skb.apply( HistGradientBoostingClassifier(
+textPipe = X.skb.apply(vectorizerText)
+textPipe = textPipe.skb.apply( HistGradientBoostingClassifier(
         max_depth=6,
         learning_rate=0.05,
         random_state=0,

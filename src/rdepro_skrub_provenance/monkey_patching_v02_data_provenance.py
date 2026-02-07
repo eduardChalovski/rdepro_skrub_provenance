@@ -102,7 +102,7 @@ class ProvenanceModule:
     
 PROVENANCE_MODULE = ProvenanceModule()  
 
-from monkey_patching_v02.data_provenance.provenance_utils_jeanne_performant import with_provenance_integers_shifted
+from src.rdepro_skrub_provenance.provenance_utils import with_provenance_integers_shifted
 from sklearn.base import is_outlier_detector, is_classifier, is_regressor
 
 from skrub import selectors as s
@@ -542,8 +542,6 @@ def evaluate_provenance(df_with_many_prov_cols):
 
     return df_with_many_prov_cols.drop(columns=prov_cols).join(result_prov)
 
-
-from collections.abc import Iterable
 
 def flatten(x):
     if isinstance(x, list):

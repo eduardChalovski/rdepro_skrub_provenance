@@ -112,7 +112,7 @@ def decode_prov_column(df, evaluate_provenance_first=True):
 
 
     if evaluate_provenance_first:
-        from monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import evaluate_provenance_fast
+        from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import evaluate_provenance_fast
         new_df = evaluate_provenance_fast(new_df) 
 
     new_df["_prov"] = new_df["_prov"].map(lambda set_x: [decode_prov(x) for x in set_x])

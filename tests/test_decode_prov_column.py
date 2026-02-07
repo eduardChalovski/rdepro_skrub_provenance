@@ -2,7 +2,7 @@
 import pandas as pd
 import skrub
 
-from rdepro_skrub_provenance.monkey_patching_v02_data_provenance import (
+from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import (
     enable_why_data_provenance,
     decode_prov_column,
 )

@@ -1,0 +1,15 @@
+import pandas as pd
+from importlib import reload
+import skrub
+from functools import wraps
+from skrub import selectors as s
+import importlib.util
+import sys
+from pathlib import Path
+import re
+
+def checkPolynomial(provPolynomial: str, dataPoint: str) :
+    if pd.isna(provPolynomial):
+        return False
+    pattern = rf'(?<!\w){re.escape(dataPoint)}(?!\w)'
+    return re.search(pattern, provPolynomial) is not None

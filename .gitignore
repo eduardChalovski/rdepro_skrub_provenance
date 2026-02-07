@@ -1,0 +1,50 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# =========================
+# Virtual environments
+# =========================
+.venv/
+venv/
+env/
+
+# =========================
+# IDEs / Editors
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Jupyter
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# Provenance / cache artifacts
+# =========================
+*.pkl
+*.joblib
+provenance_store/
+provenance_cache/
+cache/
+
+# =========================
+# Data exports (Excel / CSV)
+# =========================
+*.xlsx
+
+# =========================
+# Logs & debug output
+# =========================
+*.log

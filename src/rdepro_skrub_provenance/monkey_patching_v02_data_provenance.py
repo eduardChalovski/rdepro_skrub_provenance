@@ -1,15 +1,13 @@
 from __future__ import annotations
 import pandas as pd
 import skrub
-from functools import wraps
-# from provenance_utils_jeanne_performant import merge_with_provenance, groupby_aggregate_with_provenance, with_provenance
-# from provenance_utils_jeanne_performant import PROV_COLUMN
 from skrub import selectors as s
 from functools import wraps
 from sklearn.base import is_outlier_detector, is_classifier, is_regressor
-from rdepro_skrub_provenance.provenance_utils import decode_prov, with_provenance_integers_shifted
+from src.rdepro_skrub_provenance.provenance_utils import decode_prov, with_provenance_integers_shifted
+import math
 
-
+PROV_SELECTOR = s.filter_names(str.startswith, "_prov")
 
 # region Helpers
 def get_dataop_dictionary(a_dataop):
@@ -105,13 +103,9 @@ class ProvenanceModule:
         d["kwargs"] = {}
         return a_dataop
     
+
 PROVENANCE_MODULE = ProvenanceModule()  
 
-from src.rdepro_skrub_provenance.provenance_utils import with_provenance_integers_shifted
-from sklearn.base import is_outlier_detector, is_classifier, is_regressor
-
-from skrub import selectors as s
-PROV_SELECTOR = s.filter_names(str.startswith, "_prov")
 
 # region prov entry point
 def enter_provenance_mode_dataop(func):
@@ -186,10 +180,8 @@ def enter_provenance_mode_var(func):
         for argument in args:
  
             if isinstance(argument, skrub._data_ops._data_ops.Var):
-  
                 final_dict = get_var_dictionary(argument)
 
-        
         result = func(*args,**kwargs)
 
 
@@ -202,24 +194,16 @@ def enter_provenance_mode_var(func):
         return result # Just execute the function and get the result
     return wrapper
 
-
+# region helpers for enable
 def set_provenance(namespace, name_of_the_function, provenance_func=enter_provenance_mode_dataop):
-    skrub_eval_namespace = namespace
-    name = name_of_the_function
-    skrub_eval = getattr(skrub_eval_namespace,name,None)
-    setattr(skrub_eval_namespace, name, provenance_func(skrub_eval))
-    # print(f"Set provenance for {name}")
-
-
-
-# def prov_reduce_fast(values):
-#         out = set()
-#         for v in values:
-#             if isinstance(v, (list, tuple, set)):
-#                 out.update(v)
-#             else:
-#                 out.add(v)
-#         return out
+    current = getattr(namespace, name_of_the_function, None)
+    if current is None:
+        raise AttributeError(f"{namespace}.{name_of_the_function} not found")
+    if getattr(current, "__provenance_patch__", False):
+        return
+    wrapped = provenance_func(current)
+    setattr(wrapped, "__provenance_patch__", True)
+    setattr(namespace, name_of_the_function, wrapped)
 
 def set_reduce(values):
     # If pandas gives us a 1-column DataFrame, unwrap it
@@ -264,62 +248,6 @@ def enable_why_data_provenance(agg_func_over_prov_cols=list):
     else:
         PROVENANCE_MODULE.agg_func_over_prov_cols = agg_func_over_prov_cols
 
-
-    
-
-    # from functools import wraps
-    # def enter_skrub_learner_provenance(func):
-    #     @wraps(func)
-    #     def wrapper(*args,**kwargs):
-            
-    #         print("we are here")
-    #         print("arguemnts")
-    #         print(args)
-    #         for arg in args[1:]:
-    #             print(arg)
-    #             print()
-    #             if isinstance(arg, dict):
-    #         #         pass
-    #                 print("In the following dataframe, the _prov columns should be dropped")
-    #                 # print(arg['_skrub_X'])
-    #                 # if "_skrub_X" in arg.keys():
-    #                 #     arg['_skrub_X'] = arg['_skrub_X'].drop(columns=[col for col in arg['_skrub_X'].columns if col.startswith("_prov")])
-    #         # result = func(*args,**kwargs)
-            
-    #         # TODO: maybe reattach _prov cols to arg later
-    #         # print("result is ", result)
-
-    #         return func(*args,**kwargs) # Just execute the function and get the result
-    #     return wrapper
-
-    # set_provenance(skrub._data_ops._estimator.SkrubLearner, "_eval_in_mode", enter_skrub_learner_provenance)
-
-        
-
-        return result
-    return wrapper
-
-def set_provenance(namespace, name_of_the_function, provenance_func=enter_provenance_mode_dataop):
-    current = getattr(namespace, name_of_the_function, None)
-    if current is None:
-        raise AttributeError(f"{namespace}.{name_of_the_function} not found")
-    if getattr(current, "__provenance_patch__", False):
-        return
-    wrapped = provenance_func(current)
-    setattr(wrapped, "__provenance_patch__", True)
-    setattr(namespace, name_of_the_function, wrapped)
-
-
-
-
-# region enable_provenance
-def enable_why_data_provenance():
-    set_provenance(skrub._data_ops._evaluation,"evaluate", provenance_func=enter_provenance_mode_dataop)
-    set_provenance(skrub._data_ops._data_ops.Var,"compute", provenance_func=enter_provenance_mode_var)
-
-
-
-import math
 
 def normalize_cell(x):
     if isinstance(x, list):

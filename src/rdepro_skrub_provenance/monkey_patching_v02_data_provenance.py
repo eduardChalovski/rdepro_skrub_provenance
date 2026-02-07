@@ -4,6 +4,11 @@ import skrub
 from functools import wraps
 # from provenance_utils_jeanne_performant import merge_with_provenance, groupby_aggregate_with_provenance, with_provenance
 # from provenance_utils_jeanne_performant import PROV_COLUMN
+from skrub import selectors as s
+from functools import wraps
+from sklearn.base import is_outlier_detector, is_classifier, is_regressor
+from rdepro_skrub_provenance.provenance_utils import decode_prov, with_provenance_integers_shifted
+
 
 
 # region Helpers
@@ -172,218 +177,31 @@ def enter_provenance_mode_dataop(func):
         return func(*args, **kwargs) # Just execute the function and get the result
     return wrapper
 
-# # region prov entry point
-# def enter_provenance_mode_dataop_x(func):
-#     @wraps(func)
-#     def wrapper(*args,**kwargs):
-        
-#         result_dataop = None
-        
-#         print("[PROVENANCE]: Start")
-        
-#         for argument in args:
-                     
-            
-#             if isinstance(argument, skrub.DataOp):
-#                 result_dataop = argument
-#                 break
-
-#         if isinstance(result_dataop, skrub.DataOp):                 # If that is a DataOp we can inspect what is stored inside
-#             final_dict = get_dataop_dictionary(result_dataop)                         # Inspecting
-#             if "method_name" in final_dict.keys():                                    # Having specific attribute in the dictionary classifies what kind of DataOp it is 
-#                 # print(">>> THIS IS A CallMethod DataOp")
-#                 # # ASPJ logic is covered here
-#                 # # Pandas logic is covered here
-#                 # print("    method_name =", final_dict["method_name"])
-#                 # print("    obj =", final_dict.get("obj"))
-#                 # print("    args =", final_dict.get("args"))
-#                 # print("    kwargs =", final_dict.get("kwargs"))
-#                 corresponding_provenance_function = getattr(PROVENANCE_MODULE, "provenance_"+final_dict["method_name"], None)
-#                 if corresponding_provenance_function is None:
-#                     # print(f"""[PROVENANCE] Can't find a provenance_{final_dict["method_name"]} in the ProvenanceModule.""")
-#                     pass
-#                 else:
-#                     result_df = corresponding_provenance_function(result_dataop)
-
-#             elif "estimator" in final_dict:
-#                 # print(">>> THIS IS An Apply DataOp")
-#                 # print(argument)
-#                 # print(final_dict)
-#                 # print(final_dict.keys())
-#                 # print(final_dict)
-#                 # print("    name =", final_dict["name"])                
-#                 print("    X =", final_dict["X"])
-#                 print("    get_dataop_dictionary(X) =", get_dataop_dictionary(final_dict["X"]))
-#                 # print("    y =", final_dict["y"])
-#                 # print("    estimator =", final_dict["estimator"])
-
-#                 est = final_dict["estimator"]
-#                 if is_regressor(est) or is_classifier(est) or is_outlier_detector(est):
-
-#                     dataop_X_dict = get_dataop_dictionary(final_dict["X"])
-#                     preview  = dataop_X_dict["results"]["preview"]
-
-#                     X_prov = s.select(preview, PROV_SELECTOR)
-#                     X_main = s.select(preview, final_dict["cols"] - PROV_SELECTOR)
-
-#                     # mutate preview before estimator runs
-#                     dataop_X_dict["results"]["preview"] = X_main
-
-#                     result = func(*args, **kwargs)
-
-#                     X_out = pd.concat([result, X_prov], axis=1)
-
-#                     # update Apply DataOp result (this is the critical part for propagation)
-#                     set_dataop_dictionary_val(
-#                         a_dataop=result_dataop,
-#                         attribute_name="results",
-#                         new_val={
-#                             **final_dict["results"],
-#                             "value": X_out,
-#                             "preview": X_out,
-#                         }
-#                     )
-
-#                     return X_out
-#                 else:
-#                     set_dataop_dictionary_val(a_dataop=result_dataop,
-#                                               attribute_name="cols",
-#                                               new_val=final_dict["cols"] - PROV_SELECTOR)
-                
-
-                
-#                 # # print(" type of estimator =", type(final_dict["estimator"]))
-#             elif "attr_name" in final_dict:
-#                 # TODO: introduce provenance, if one column is selected -> attach to it all prov_cols -> risky if for example ApplyToCols takes one column and gets a dataframe..
-#                 pass
-#                 # print(">>> THIS IS A GetAttr DataOp")
-#                 # print("    attr_name =", final_dict["attr_name"])
-#                 # print("    source_object =", final_dict.get("source_object"))
-#             else:
-#                 pass
-#                 # print("The evaluated DataOp is neither a CallMethod, nor a GetAttr, not a Apply")
-#                 # print("# printing its dictionary")
-#                 # print(final_dict)
-            
-#             print("[PROVENANCE]: END")
-#             ## print(final_dict)
-
-#         return func(*args, **kwargs) # Just execute the function and get the result
-#     return wrapper
-
 # region provenance var
-
+# TODO: need to change the wrapper
 def enter_provenance_mode_var(func):
     @wraps(func)
     def wrapper(*args,**kwargs):
         
-        # result_dataop = None
-        
-        # print("[PROVENANCE Var]: Start")
-        
-        # print("printing result")
-        # print(result)
-        # print(type(result))
-        # print("printing all arguments")
         for argument in args:
-            # print("#"*40)
-            # print("argument")
-            # print(argument)
-            # # print("isinstance of dataop")
-            # # print(isinstance(argument, skrub.DataOp))
-            # # print(isinstance(argument, skrub._data_ops._data_ops.DataOp))
-            # # print(type(result_dataop) == skrub._data_ops._data_ops.DataOp)
-            # # print(isinstance(argument, skrub._data_ops._data_ops.Var))
-            # # print(type(argument)== skrub._data_ops._data_ops.Var)
-            # print("type of argument")
-            # print(type(argument))
-            # print("#"*40)
+ 
             if isinstance(argument, skrub._data_ops._data_ops.Var):
-                # print("I guess the CallMethod has var")
-                # print("check worked!")
-                # skrub.Var is the _skrub_impl -> to get the dictionary just call argument.__dict__
-                # Note it uses get_var_dictionary, not get_dataop_dictionary 
+  
                 final_dict = get_var_dictionary(argument)
-                # result_var = argument
-                # if "name" in final_dict.keys() and "value" in final_dict.keys():
-                #     # print(">>> THIS IS Var DataOp")
-                #     # print(final_dict)
-                #     set_var_dictionary_val(a_var=argument, 
-                #                             attribute_name="value", # dataframe is stored under value -> we append the provenance column to it
-                #                             new_val=with_provenance_integers_shifted(df=final_dict["value"], table_name=final_dict["name"]))
-                    # print("Adjusted final_dict")
-                    # print()
-                    # print(final_dict)
-            # if isinstance(argument, types.SimpleNamespace):
-            #     print("#"*80)
-            #     print("Found SimpleNamespace")
-            #     print("#"*80)
-            #     print(argument)
-            #     print(argument.name)
-            #     print("before:", argument)
-            #     argument.__dict__["value"] = with_provenance_integers_shifted(df=final_dict["value"], table_name=final_dict["name"])
-            #     print("after: ",argument)
-                
+
         
         result = func(*args,**kwargs)
-        # print(type(result))
 
-        # In your setup, Sentinels mean:
-
-        # “This value is intentionally not materialized yet.
-        # It exists only so Skrub can track the graph.”
-        # They appear during:
-        # train_test_split
-        # make_learner
-        # fit_transform
-        # any estimator boundary
-        # They are expected and normal in Skrub.
 
         if isinstance(result, pd.DataFrame):
             result = with_provenance_integers_shifted(
                 df=result,
                 table_name=final_dict["name"]
             )
-        # result = with_provenance_integers_shifted(df=final_dict["value"], table_name=final_dict["name"])
-
-
-        # set_var_dictionary_val(
-        #                     a_var=result_var,
-        #                     attribute_name="results",
-        #                     new_val={
-        #                         **final_dict["results"],
-        #                         "value": result,
-        #                         "preview": result,
-        #                     }
-        #                 )
-        # print(result)
-        # print()
-        # print("Result after adjusting SimpleNamespace")
-        # print(result)
-        
-        # print("[PROVENANCE VAR]: End")
 
         return result # Just execute the function and get the result
     return wrapper
 
-
-# def enter_provenance_mode_var(func):
-#     @wraps(func)
-#     def wrapper(*args,**kwargs):
-        
-#         for argument in args:
-            
-#             if isinstance(argument, skrub._data_ops._data_ops.Var):
-                
-#                 final_dict = get_var_dictionary(argument)          
-        
-#         result = func(*args,**kwargs)
-#         result = with_provenance_integers_shifted(df=final_dict["value"], table_name=final_dict["name"])
-
-
-
-#         return result # Just execute the function and get the result
-#     return wrapper
 
 def set_provenance(namespace, name_of_the_function, provenance_func=enter_provenance_mode_dataop):
     skrub_eval_namespace = namespace
@@ -476,6 +294,30 @@ def enable_why_data_provenance(agg_func_over_prov_cols=list):
 
     # set_provenance(skrub._data_ops._estimator.SkrubLearner, "_eval_in_mode", enter_skrub_learner_provenance)
 
+        
+
+        return result
+    return wrapper
+
+def set_provenance(namespace, name_of_the_function, provenance_func=enter_provenance_mode_dataop):
+    current = getattr(namespace, name_of_the_function, None)
+    if current is None:
+        raise AttributeError(f"{namespace}.{name_of_the_function} not found")
+    if getattr(current, "__provenance_patch__", False):
+        return
+    wrapped = provenance_func(current)
+    setattr(wrapped, "__provenance_patch__", True)
+    setattr(namespace, name_of_the_function, wrapped)
+
+
+
+
+# region enable_provenance
+def enable_why_data_provenance():
+    set_provenance(skrub._data_ops._evaluation,"evaluate", provenance_func=enter_provenance_mode_dataop)
+    set_provenance(skrub._data_ops._data_ops.Var,"compute", provenance_func=enter_provenance_mode_var)
+
+
 
 import math
 
@@ -518,18 +360,12 @@ def evaluate_provenance(df_with_many_prov_cols):
         while prov[col].map(lambda x: isinstance(x, list)).any():
             prov = prov.explode(col)
 
-    # print("exploded prov")
-    # print(prov)
 
     flat = (
         prov
         .stack()
         .dropna()
     )
-    # print()
-    # print("flat")
-    # print()
-    # print(flat)
 
     flat = flat.astype(float).astype(int)
 
@@ -550,11 +386,32 @@ def flatten(x):
     elif x is not None:
         yield x
 
+def _is_prov_col(col) -> bool:
+    if isinstance(col, str):
+        return col.startswith("_prov")
+    if isinstance(col, tuple) and len(col) > 0 and isinstance(col[0], str):
+        return col[0].startswith("_prov")
+    return False
+
+def _make_prov_column(df, prov_series):
+ 
+    if df.columns.nlevels == 1:
+        return df.join(prov_series)
+    prov_df = prov_series.to_frame()
+    new_cols = pd.MultiIndex.from_tuples(
+        [("_prov",) + ("",) * (df.columns.nlevels - 1)]
+    )
+    prov_df.columns = new_cols
+
+    return pd.concat([df, prov_df], axis=1)
+
+
+
 def evaluate_provenance_fast(df):
     if isinstance(df, skrub.DataOp):
         df = df.skb.preview()
 
-    prov_cols = [c for c in df.columns if c.startswith("_prov")]
+    prov_cols = [c for c in df.columns if _is_prov_col(c)]
 
     prov_series = (
         df[prov_cols]
@@ -570,8 +427,44 @@ def evaluate_provenance_fast(df):
         .rename("_prov")
     )
 
-    return df.drop(columns=prov_cols).join(prov_series)
+    base = df.drop(columns=prov_cols)
+    return _make_prov_column(base, prov_series)
 
-# region checklist of functions
-# To adapt more functions take a look at:
-# https://skrub-data.org/stable/reference/index.html+-
+
+# TODO: i believe it does not work -> only the verison from provenance utils works. Please check it and delete the version in this file if it is broken
+def decode_prov_column(df, evaluate_provenance_first=True):
+    """
+    Decode 64-bit integer provenance IDs into a human-readable format.
+
+    This function transforms the values in the ``"_prov"`` column from
+    encoded 64-bit integers into the form::
+
+        table_name:row_id
+
+    It should be applied **after** provenance columns have been evaluated
+    and consolidated into a single ``"_prov"`` column.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        A DataFrame containing a ``"_prov"`` column with encoded provenance IDs.
+
+    evaluate_provenance_first : bool
+        If True, all ``_prov*`` columns are evaluated and consolidated into a
+        single ``"_prov"`` column prior to decoding. If False, the function
+        assumes that a ``"_prov"`` column already exists.
+        
+    Returns
+    -------
+    pandas.DataFrame
+        A copy of the input DataFrame with decoded, more interpretable
+        provenance identifiers.
+    """
+    new_df = df.copy()
+
+
+    if evaluate_provenance_first:
+        new_df = evaluate_provenance_fast(new_df) 
+
+    new_df["_prov"] = new_df["_prov"].map(lambda set_x: [decode_prov(x) for x in set_x])
+    return new_df

@@ -2,6 +2,9 @@
 #REMOVE OUTLIERS
 #“Which customers are likely to generate high future revenue, despite extreme or irregular purchasing behavior?”
 
+# To run the script execute this line from the root project directory:
+# python -m pipelines.pipeline1_SKRUBIFIED --track-provenance
+
 # python -m cProfile -o pipeline1_SKRUBIFIED_with_provenance_pd_integer_array_profile.out .\mystuff\pipeline1_SKRUBIFIED.py --track-provenance
 # python -m cProfile -o pipeline1_SKRUBIFIED_with_provenance_profile.out .\mystuff\pipeline1_SKRUBIFIED.py --track-provenance
 # python -m cProfile -o pipeline1_SKRUBIFIED_with_provenance_frozenset_profile.out .\mystuff\pipeline1_SKRUBIFIED.py --track-provenance
@@ -55,14 +58,14 @@ else:
 # 1. BUILD CUSTOMER-LEVEL FEATURE TABLE
 # -------------------------------------------------
 print("Libraries imported")
-base_path = "C:/Users/eduar/Documents/RDEPro_testing/rdepro_skrub_provenance"
-customers = skrub.var("customers", pd.read_csv(f'{base_path}/src/datasets/olist_customers_dataset.csv'))
-orders = skrub.var("orders", pd.read_csv(f'{base_path}/src/datasets/olist_orders_dataset.csv'))
-order_items = skrub.var("order_items", pd.read_csv(f'{base_path}/src/datasets/olist_order_items_dataset.csv'))
-payments = skrub.var("payments",pd.read_csv(f'{base_path}/src/datasets/olist_order_payments_dataset.csv'))
-reviews = skrub.var("reviews",pd.read_csv(f'{base_path}/src/datasets/olist_order_reviews_dataset.csv'))
-order_payments = skrub.var("order_payments", pd.read_csv(f'{base_path}/src/datasets/olist_order_payments_dataset.csv'))
-geolocation = skrub.var("geolocation", pd.read_csv(f'{base_path}/src/datasets/olist_geolocation_dataset.csv'))
+# base_path = "C:/Users/eduar/Documents/RDEPro_testing/rdepro_skrub_provenance"
+customers = skrub.var("customers", pd.read_csv(f'./src/datasets/olist_customers_dataset.csv'))
+orders = skrub.var("orders", pd.read_csv(f'./src/datasets/olist_orders_dataset.csv'))
+order_items = skrub.var("order_items", pd.read_csv(f'./src/datasets/olist_order_items_dataset.csv'))
+payments = skrub.var("payments",pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv'))
+reviews = skrub.var("reviews",pd.read_csv(f'./src/datasets/olist_order_reviews_dataset.csv'))
+order_payments = skrub.var("order_payments", pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv'))
+geolocation = skrub.var("geolocation", pd.read_csv(f'./src/datasets/olist_geolocation_dataset.csv'))
 
 print("Files read, starting the preprocessing")
 # --- 1. Aggregate order items ---

@@ -179,6 +179,7 @@ X = Xpre.skb.apply(preprocessor).skb.mark_as_X()
 # X = X.drop(columns=[col for col in provX_cols if col.startswith("_prov")])
 pipeline = X.skb.apply(clf, y=y)
 
+print(pipeline.skb.draw_graph().open())
 # all_cols = pipeline.skb.preview()
 # prov_cols = [col for col in all_cols if col.startswith("_prov")]
 learner = pipeline.skb.make_learner(fitted=True)#fitted=True) # testing if it is because of fitted=True(fitted=True)

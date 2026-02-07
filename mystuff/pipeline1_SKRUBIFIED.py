@@ -2,6 +2,21 @@
 #REMOVE OUTLIERS
 #“Which customers are likely to generate high future revenue, despite extreme or irregular purchasing behavior?”
 
+# python -m cProfile -o pipeline1_SKRUBIFIED_with_provenance_pd_integer_array_profile.out .\mystuff\pipeline1_SKRUBIFIED.py --track-provenance
+# python -m cProfile -o pipeline1_SKRUBIFIED_with_provenance_profile.out .\mystuff\pipeline1_SKRUBIFIED.py --track-provenance
+# python -m cProfile -o pipeline1_SKRUBIFIED_with_provenance_frozenset_profile.out .\mystuff\pipeline1_SKRUBIFIED.py --track-provenance
+# python -m cProfile -o pipeline1_SKRUBIFIED_without_provenance_profile.out .\mystuff\pipeline1_SKRUBIFIED.py
+
+# "sort cumtime`nstats 200`nquit" | python -m pstats .\pipeline1_SKRUBIFIED_with_provenance_frozenset_profile.out
+# "sort cumtime`nstats 200`nquit" | python -m pstats .\pipeline1_SKRUBIFIED_with_provenance_profile.out
+# "sort cumtime`nstats 200`nquit" | python -m pstats .\pipeline1_SKRUBIFIED_without_provenance_profile.out
+
+# snakeviz .\pipeline1_SKRUBIFIED_with_provenance_pd_integer_array_profile.out
+# snakeviz .\pipeline1_SKRUBIFIED_with_provenance_frozenset_profile.out
+# snakeviz .\pipeline1_SKRUBIFIED_with_provenance_profile.out
+# snakeviz .\pipeline1_SKRUBIFIED_without_provenance_profile.out
+
+
 import sys
 from pathlib import Path
 
@@ -18,8 +33,24 @@ import skrub
 from sklearn.pipeline import Pipeline
 from skrub import SquashingScaler 
 
-from monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
-enable_why_data_provenance()
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--track-provenance",
+    action="store_true",
+    help="Enable provenance tracking"
+)
+args = parser.parse_args()
+
+if args.track_provenance:
+    print("Provenance is enabled")
+    from monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
+    enable_why_data_provenance(pd.arrays.IntegerArray)
+else:
+    print("Provenance is disabled")
+
+
 # -------------------------------------------------
 # 1. BUILD CUSTOMER-LEVEL FEATURE TABLE
 # -------------------------------------------------
@@ -109,12 +140,18 @@ X = (Xpre.skb.apply(preprocessor)).skb.mark_as_X()
 model = HistGradientBoostingRegressor()
 predictor = X.skb.apply(model, y=y)
 
+# predictor.skb.draw_graph().open()
+# g = predictor.draw_graph()
+
+# with open("graph.png", "wb") as f:
+#     f.write(g.png)
+
 learner = predictor.skb.make_learner(fitted=True)
 split = predictor.skb.train_test_split(random_state= 0)
 learner.score(split["test"])
 
 pred = learner.predict(split["test"])
-print(pred)   
+# print(pred)   
 
 # --- 9. Cross-validate ---
 #cv_results = cross_validate(learner, X, y, cv=5, return_train_score=True)
@@ -129,6 +166,8 @@ print(pred)
 #print(f"R2 score: mean={np.mean(cv_results['test_score']):.3f}, std={np.std(cv_results['test_score']):.3f}")
 #print(f"mean fit time: {np.mean(cv_results['fit_time']):.3f} seconds")
 #print(customer_features[['customer_id', 'predicted_sum_payment']].head(20))
-import pickle
-with open("output.pkl", "wb") as f:
-    pickle.dump(customer_features, f)
+
+# Uncomment to run the determenism check correctly
+# import pickle
+# with open("output.pkl", "wb") as f:
+#     pickle.dump(customer_features, f)

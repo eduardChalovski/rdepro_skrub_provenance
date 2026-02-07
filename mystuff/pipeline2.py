@@ -9,6 +9,12 @@
 #different spellings, language variants, abbreviations, pluralization, legacy names
 
 
+# TODO: is there a better way than adding a parent directory here?
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
 import pandas as pd
 import numpy as np
 from sklearn.pipeline import Pipeline
@@ -18,17 +24,25 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.model_selection import cross_validate
 import skrub
 from skrub import Joiner, SelectCols
+
+
+from monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
+# enable_why_data_provenance()
+
 # -------------------------------------------------
 # 1. BUILD CUSTOMER-LEVEL FEATURE TABLE
 # -------------------------------------------------
-customers = skrub.var("customers", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_customers_dataset.csv'))
-orders = skrub.var("orders", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_orders_dataset.csv'))
-order_items = skrub.var("order_items", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_items_dataset.csv'))
-payments = skrub.var("payments",pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
-reviews = skrub.var("reviews",pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_reviews_dataset.csv'))
-order_payments = skrub.var("order_payments", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
-geolocation = skrub.var("geolocation", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_geolocation_dataset.csv'))
-products = skrub.var("products", pd.read_csv('C:/Users/teodo/Desktop/github/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_products_dataset.csv'))
+print("Libraries imported")
+base_path = "C:/Users/eduar/Documents/RDEPro_github_clean/rdepro_skrub_provenance/monkey_patching_v02/data_provenance"
+
+customers = skrub.var("customers", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_customers_dataset.csv'))
+orders = skrub.var("orders", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_orders_dataset.csv'))
+order_items = skrub.var("order_items", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_items_dataset.csv'))
+payments = skrub.var("payments",pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
+reviews = skrub.var("reviews",pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_reviews_dataset.csv'))
+order_payments = skrub.var("order_payments", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
+geolocation = skrub.var("geolocation", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_geolocation_dataset.csv'))
+products = skrub.var("products", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_products_dataset.csv'))
 
 order_items_agg = order_items.groupby('order_id').agg(
     total_items=('order_item_id', 'count'),

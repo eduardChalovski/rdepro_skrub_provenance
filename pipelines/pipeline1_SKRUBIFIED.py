@@ -45,8 +45,8 @@ args = parser.parse_args()
 
 if args.track_provenance:
     print("Provenance is enabled")
-    from monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
-    enable_why_data_provenance(pd.arrays.IntegerArray)
+    from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
+    enable_why_data_provenance()
 else:
     print("Provenance is disabled")
 
@@ -55,14 +55,14 @@ else:
 # 1. BUILD CUSTOMER-LEVEL FEATURE TABLE
 # -------------------------------------------------
 print("Libraries imported")
-base_path = "C:/Users/eduar/Documents/RDEPro_github_clean/rdepro_skrub_provenance/monkey_patching_v02/data_provenance"
-customers = skrub.var("customers", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_customers_dataset.csv'))
-orders = skrub.var("orders", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_orders_dataset.csv'))
-order_items = skrub.var("order_items", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_items_dataset.csv'))
-payments = skrub.var("payments",pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
-reviews = skrub.var("reviews",pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_reviews_dataset.csv'))
-order_payments = skrub.var("order_payments", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
-geolocation = skrub.var("geolocation", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_geolocation_dataset.csv'))
+base_path = "C:/Users/eduar/Documents/RDEPro_testing/rdepro_skrub_provenance"
+customers = skrub.var("customers", pd.read_csv(f'{base_path}/src/datasets/olist_customers_dataset.csv'))
+orders = skrub.var("orders", pd.read_csv(f'{base_path}/src/datasets/olist_orders_dataset.csv'))
+order_items = skrub.var("order_items", pd.read_csv(f'{base_path}/src/datasets/olist_order_items_dataset.csv'))
+payments = skrub.var("payments",pd.read_csv(f'{base_path}/src/datasets/olist_order_payments_dataset.csv'))
+reviews = skrub.var("reviews",pd.read_csv(f'{base_path}/src/datasets/olist_order_reviews_dataset.csv'))
+order_payments = skrub.var("order_payments", pd.read_csv(f'{base_path}/src/datasets/olist_order_payments_dataset.csv'))
+geolocation = skrub.var("geolocation", pd.read_csv(f'{base_path}/src/datasets/olist_geolocation_dataset.csv'))
 
 print("Files read, starting the preprocessing")
 # --- 1. Aggregate order items ---
@@ -151,7 +151,7 @@ split = predictor.skb.train_test_split(random_state= 0)
 learner.score(split["test"])
 
 pred = learner.predict(split["test"])
-# print(pred)   
+print(pred)   
 
 # --- 9. Cross-validate ---
 #cv_results = cross_validate(learner, X, y, cv=5, return_train_score=True)

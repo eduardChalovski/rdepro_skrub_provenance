@@ -1,6 +1,0 @@
-n_rows_input,num_operations,mem_with_initialization,mem_with_merge,mem_with_aggregation,mem_with_tablevectorizer,total_mem_with
-1000,1,139014,0,0,0,139014
-10000,1,1389150,0,0,0,1389150
-100000,1,13890087,0,0,0,13890087
-1000000,1,138900261,0,0,0,138900261
-10000000,1,1389001550,0,0,0,1389001550

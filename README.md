@@ -1,7 +1,7 @@
-# Project Title
+# Provenance Tracking for Skrub Data Ops Pipelines
 
 ## Overview
-This project was developed as part of a university course. The main goal is to introduce **provenance tracking** into **skrub DataOps pipelines**, enabling better transparency, debugging, and analysis of data transformations and machine learning workflows.
+This project was developed as part of the Responsible Data Engineering Project at the DEEM Lab, TU Berlin. The main goal is to introduce **provenance tracking** into **skrub DataOps pipelines**, enabling better transparency, debugging, and analysis of data transformations and machine learning workflows.
 
 The project extends existing skrub functionality by tracking how data flows through complex pipelines built on top of pandas and scikit-learn.
 
@@ -29,6 +29,11 @@ Key design goals:
 
 ---
 
+## Implementation Details
+
+
+---
+
 ## Supported Operations
 
 ### ASPJ Pandas Operations
@@ -38,12 +43,12 @@ We provide provenance support for **ASPJ-style pandas operations**, including:
 - **Projection**
 - **Join**
 
-These operations are commonly used in data preparation pipelines and required careful handling to correctly propagate provenance through grouped, merged, and transformed dataframes.
+These operations are commonly used in data preparation pipelines and represent basic building blocks for numerous relational operators.
 
 Implementation highlights:
-- Monkey-patching selected pandas operations
-- Tracking row-level and column-level provenance
-- Handling groupby-aggregation semantics
+- 
+- Eager Tracking of the row-level provenance
+- Why provenance
 
 ---
 
@@ -55,7 +60,7 @@ Supported components include:
 - Estimators used within pipelines
 - Fit / transform / predict stages
 
-This enables end-to-end provenance from raw data to model predictions.
+This enables end-to-end provenance from raw data up until model predictions.
 
 ---
 
@@ -82,6 +87,7 @@ We implemented a comprehensive test suite to ensure correctness and stability:
 - Edge case testing for joins, aggregations, and transformations
 
 Tests are written to validate both:
+??
 - Functional correctness
 - Correctness of provenance metadata
 
@@ -93,9 +99,8 @@ To evaluate performance, we designed benchmarks comparing:
 - Equivalent pipelines without provenance tracking
 
 Metrics include:
-- Execution time
-- Memory usage
-- Overhead introduced by provenance tracking
+- Execution time overhead
+- Memory usage overhead
 
 The results help quantify the trade-offs between transparency and performance.
 
@@ -140,9 +145,10 @@ These experiments provide insight into how the system behaves under realistic wo
 ---
 
 ## Authors
-- Your Name
+- Teodor
+- Jeanne
+- Yigit
+- Eduard Chalovski
 
 ---
 
-## License
-(Add license information if applicable.)

@@ -1,7 +1,9 @@
 # Provenance Tracking for Skrub Data Ops Pipelines
 
 ## Overview
-This project was developed as part of the Responsible Data Engineering Project at the DEEM Lab, TU Berlin. The main goal is to introduce **provenance tracking** into **skrub DataOps pipelines**, enabling better transparency, debugging, and analysis of data transformations and machine learning workflows.
+This project was developed as part of the Responsible Data Engineering Project at the DEEM Lab, TU Berlin.
+
+The main goal is to introduce **provenance tracking** into **skrub DataOps pipelines**, enabling better transparency, debugging, and analysis of data transformations and machine learning workflows.
 
 The project extends existing skrub functionality by tracking how data flows through complex pipelines built on top of pandas and scikit-learn.
 
@@ -19,48 +21,179 @@ This project explores how provenance tracking can be integrated with minimal ove
 ---
 
 ## Provenance Tracking in skrub
-We introduce provenance tracking at the **DataOp** level in skrub pipelines. The tracking mechanism records relationships between input data, intermediate transformations, and final outputs.
+Provenance is introduced at the **DataOp level** in skrub.  
+Each DataOp propagates **row-level provenance identifiers**, capturing how output rows depend on input rows across transformations.
 
-Key design goals:
-- Minimal runtime overhead
+### Design Goals
+- Minimal runtime and memory overhead
 - Compatibility with existing skrub pipelines
 - Support for complex pandas and scikit-learn operations
-- Clear and inspectable provenance metadata
+- Clear, inspectable provenance metadata
+- Extensibility to other pandas- and sklearn-compatible libraries
 
 ---
 
 ## Implementation Details
 
+### Code Location
+The main logic is implemented in:
+
+- **.src/rdepro_skrub/monkey_patching_v02.py**  
+  Core provenance propagation logic and DataOp wrappers.
+
+- **.src/rdepro_skrub/utils.py**  
+  Utilities for table ID definition and provenance evaluation.
+
+---
+
+### Main Components
+
+#### Monkey Patching Strategy
+Provenance is introduced by **wrapping two key execution points** in skrub:
+
+1. **Wrapper around `skrub._data_ops._data_ops.Var.compute`**  
+   Adds provenance ID columns at data ingestion time.
+
+2. **Wrapper around `skrub._data_ops._evaluation.evaluate`**  
+   This function is called during DataOp validation *before execution*.  
+   The wrapper inspects:
+   - The type of the DataOp subclass
+   - Its arguments
+   - The operation semantics  
+
+   Arguments are then adjusted to ensure correct provenance propagation.
+
+---
+
+### Provenance ID Encoding
+To minimize memory overhead and benefit from optimized numeric operations:
+
+- Provenance columns are stored as **numpy.int64**
+- Each provenance ID encodes:
+  - **Table ID** (upper 16 bits)
+  - **Row ID** (lower 48 bits)
+
+The table ID is bit-shifted 48 bits to the left:
+
+```
+(table_id << 48) | row_id
+```
+
+This encoding supports:
+- ~65,000 tables (2¹⁶)
+- ~281 trillion rows per table (2⁴⁸)
+
+This ensures globally unique provenance identifiers across pipelines.
 
 ---
 
 ## Supported Operations
 
 ### ASPJ Pandas Operations
-We provide provenance support for **ASPJ-style pandas operations**, including:
-- **Aggregation**
-- **Selection**
-- **Projection**
-- **Join**
+Provenance is supported for **ASPJ-style pandas operations**, including:
+- Aggregation
+- Selection
+- Projection
+- Join
 
-These operations are commonly used in data preparation pipelines and represent basic building blocks for numerous relational operators.
+These operations form the relational backbone of data preparation pipelines.
 
-Implementation highlights:
-- 
-- Eager Tracking of the row-level provenance
-- Why provenance
+#### Aggregation Handling
+Aggregation is handled through the `CallDataOp` subclass.
+
+If the DataOp corresponds to a pandas `.agg` call:
+- The method name is inspected
+- Additional aggregation arguments are injected
+- Provenance columns are aggregated using the `list` function
+
+This logic is implemented in provenance_agg(dataop)
+
+Internally, the DataOp is inspected via:
+
+```
+dataop._skrub_impl.__dict__
+```
+
+#### Selection Handling 
+Selection is handled automatically by pandas once provenance ID columns have been introduced into the table.
+
+#### Projection Handling
+Projection is supported through the use of the skrub `SelectCols` estimator.
+
+If pandas-style column selection is used directly:
+```
+df[[col_name1, col_name2]]
+```
+
+the provenance columns are **not propagated**, as they are not included in the selected columns.
+
+To ensure correct provenance propagation, projection must be performed using:
+
+```
+df.skb.select([col_name1, col_name2])
+```
+
+Internally, `.skb.select()` creates a `SelectCols` DataOp that is applied via `.skb.apply(SelectCols)`. During the DataOp evaluation, provenance columns are injected into the arguments of `SelectCols`, ensuring that projection preserves the associated provenance information. Further details are provided in the section describing the handling of `ApplyDataOp` execution.
+
+
+#### Join Handling
+Propagation of provenance IDs for join operations is handled entirely by pandas once provenance columns are present in the input DataFrames.
 
 ---
 
 ### scikit-learn Estimators
-Provenance tracking is also supported for **scikit-learn estimators**, allowing us to trace how transformed features and model outputs depend on the original data.
+Provenance is supported for scikit-learn estimators via `ApplyDataOp`.
 
-Supported components include:
-- Transformers (e.g., scaling, encoding)
-- Estimators used within pipelines
-- Fit / transform / predict stages
+Three cases are handled:
 
-This enables end-to-end provenance from raw data up until model predictions.
+1. **Final estimators** (classifiers, regressors, outlier detectors)  
+   Provenance columns are dropped before execution.  
+   Provenance should be inspected before prediction using `evaluate_provenance`.
+
+2. **SelectCols estimator (projection)**  
+   Provenance columns are added to the selected columns list.
+
+3. **Other transformers**  
+   Provenance columns are dropped before execution and reattached afterward.
+
+---
+
+### Extensibility to Other Libraries
+Provenance support can be extended to other pandas-compatible libraries by defining a function named:
+
+```
+provenance_<function_name>
+```
+
+Example:
+```
+provenance_sem_map
+```
+
+Such functions should be implemented as methods of the `ProvenanceModule` class. During execution, the appropriate provenance handler is discovered automatically using `getattr(ProvenanceModule, provenance_<function_name>)` and applied before the corresponding `DataOp` is evaluated. This follows a visitor-style pattern and allows new operations to be supported without modifying the core execution logic.
+
+Provenance tracking can also be extended to other scikit-learn–compatible libraries. In the current implementation, this is achieved by adding a dedicated conditional branch for the specific estimator. If the number of such cases grows, the same visitor-style approach used for pandas operations can be adopted to avoid overly complex conditional logic.
+
+An example is `RandomUnderSampler` from the scikit-learn–compatible imbalanced-learn library. Since this estimator changes the number of rows, provenance columns must not be dropped before execution. Instead, when rows are copied or removed, their corresponding provenance information should be propagated accordingly.
+
+
+---
+
+### Train/Test Split
+For `train_test_split`, provenance can be inspected via:
+
+```
+split["train"]["_skrubimpl_X"]
+```
+
+---
+
+## Inspecting Provenance
+Provenance can be inspected using:
+
+1. **show_provenance** – raw provenance columns  
+2. **evaluate_provenance** – single cleaned provenance column  
+3. **decode_provenance** – human-readable string format
 
 ---
 

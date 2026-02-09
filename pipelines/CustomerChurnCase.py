@@ -1,10 +1,7 @@
 import sys
 from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-project_root = Path.cwd().parents[1]
-sys.path.insert(0, str(project_root))
-
-print("Added to sys.path:", project_root)
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -47,11 +44,11 @@ else:
 print("Libraries imported")
 base_path = "C:/Users/eduar/Documents/RDEPro_github_clean/rdepro_skrub_provenance/monkey_patching_v02/data_provenance"
 
-customers = pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_customers_dataset.csv')
-orders = pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_orders_dataset.csv')
-order_items = skrub.var("order_items", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_items_dataset.csv'))
-order_payments = skrub.var("order_payments",pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
-order_reviews = skrub.var("order_reviews", pd.read_csv(f'{base_path}/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_reviews_dataset.csv'))
+customers = pd.read_csv(f'./src/datasets/olist_customers_dataset.csv')
+orders =  pd.read_csv(f'./src/datasets/olist_orders_dataset.csv')
+order_items = order_items = skrub.var("order_items", pd.read_csv(f'./src/datasets/olist_order_items_dataset.csv'))
+order_payments = skrub.var("payments",pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv'))
+order_reviews = skrub.var("reviews",pd.read_csv(f'./src/datasets/olist_order_reviews_dataset.csv'))
 
 # Preprocessing
 #df = pd.merge(orders, customers, on='customer_id')

@@ -1,21 +1,17 @@
 import sys
 from pathlib import Path
 
-project_root = Path.cwd().parents[1]
-sys.path.insert(0, str(project_root))
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-print("Added to sys.path:", project_root)
+
 # End-to-End Data Analysis
 # =====================================================
-
 
 """
 Objective:
 Analyze Brazilian e-commerce orders to understand delivery performance,
 customer satisfaction, and key operational drivers.
 """
-
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,6 +21,7 @@ import skrub
 from skrub import ToDatetime
 from skrub import TableReport
 sns.set(style="whitegrid")
+
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -42,14 +39,13 @@ if args.track_provenance:
 else:
     print("Provenance is disabled")
 
-base_path = "/kaggle/input/brazilian-ecommerce"
 
-customers = skrub.var("customers",pd.read_csv('C:/Users/eduar/Documents/RDEPro_github_clean/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_customers_dataset.csv'))
-orders = pd.read_csv('C:/Users/eduar/Documents/RDEPro_github_clean/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_orders_dataset.csv')
-order_items = skrub.var("order_items", pd.read_csv('C:/Users/eduar/Documents/RDEPro_github_clean/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_items_dataset.csv'))
-payments = skrub.var("payment", pd.read_csv('C:/Users/eduar/Documents/RDEPro_github_clean/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_payments_dataset.csv'))
-reviews = skrub.var("reviews", pd.read_csv('C:/Users/eduar/Documents/RDEPro_github_clean/rdepro_skrub_provenance/monkey_patching_v02/data_provenance/kagglePipelines/data/datasets/olistbr/brazilian-ecommerce/versions/2/olist_order_reviews_dataset.csv'))
 
+customers = skrub.var("customers", pd.read_csv(f'./src/datasets/olist_customers_dataset.csv'))
+orders =  pd.read_csv(f'./src/datasets/olist_orders_dataset.csv')
+order_items = skrub.var("order_items", pd.read_csv(f'./src/datasets/olist_order_items_dataset.csv'))
+payments = skrub.var("payments",pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv'))
+reviews = skrub.var("reviews",pd.read_csv(f'./src/datasets/olist_order_reviews_dataset.csv'))
 
 #df = (
  #   orders

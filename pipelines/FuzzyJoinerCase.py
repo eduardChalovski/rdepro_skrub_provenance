@@ -1,8 +1,18 @@
-import pandas as pd
-import numpy as np
-import skrub
 import sys
 from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+from skrub import fuzzy_join
+import pandas as pd
+import numpy as np
+from sklearn.pipeline import make_pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.model_selection import cross_validate
+import skrub
+from sklearn.pipeline import Pipeline
+from skrub import SquashingScaler 
 
 import argparse
 
@@ -12,8 +22,8 @@ parser.add_argument(
     action="store_true",
     help="Enable provenance tracking"
 )
-from skrub import fuzzy_join
 args = parser.parse_args()
+
 if args.track_provenance:
     print("Provenance is enabled")
     from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
@@ -24,9 +34,10 @@ else:
 
 customers = skrub.var("customers", pd.read_csv(f'./src/datasets/olist_customers_dataset.csv'))
 orders = skrub.var("orders", pd.read_csv(f'./src/datasets/olist_orders_dataset.csv'))
-order_items = skrub.var("order_items", pd.read_csv(f'./src/datasets/olist_order_items_dataset.csv').sample(frac = 0.01))
-payments = skrub.var("payments",pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv').sample(frac= 0.01))
+order_items = skrub.var("order_items", pd.read_csv(f'./src/datasets/olist_order_items_dataset.csv'))
+payments = skrub.var("payments",pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv'))
 reviews = skrub.var("reviews",pd.read_csv(f'./src/datasets/olist_order_reviews_dataset.csv'))
+order_payments = skrub.var("order_payments", pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv'))
 geolocation = skrub.var("geolocation", pd.read_csv(f'./src/datasets/olist_geolocation_dataset.csv'))
 
 
@@ -42,7 +53,7 @@ augmented_df = fuzzy_join(
     add_match_info=True,
 )
 
-print(augmented_df.columns)
+print(augmented_df)
 
 
 

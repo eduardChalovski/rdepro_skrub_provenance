@@ -49,17 +49,32 @@ class ProvenanceModule:
             d["kwargs"] = {}
 
         object_inside_preview = preview_of_dataop_inside["preview"]
-        if isinstance(object_inside_preview, pd.core.groupby.generic.DataFrameGroupBy):
-            cols = object_inside_preview.obj.columns
-            groupby_keys = object_inside_preview._grouper.names
-        elif isinstance(object_inside_preview, pd.DataFrame):
-            cols = object_inside_preview.columns
-        else:
+        # aggregation can be executed on a groupby object, on a pd.DataFrame, or a pd.Series
+        # for pd.DataFrame.groupby().agg()
+        if isinstance(object_inside_preview, pd.core.groupby.generic.DataFrameGroupBy):     
+            cols = object_inside_preview.obj.columns                            
+            groupby_keys = object_inside_preview._grouper.names       
+
+        # for pd.DataFrame.agg()                      
+        elif isinstance(object_inside_preview, pd.DataFrame):                               
+            cols = object_inside_preview.columns                     
+
+        # for pd.Series.agg() -> 
+        else:                                                                               
             cols = []
 
+        # Arguments that are passed to the agg function can be of different type
+        # the passed argument is just a string or a callable, example .agg("max"), .agg(list)
         if isinstance(agg_dict, str) or callable(agg_dict):
-            # apply to all columns
+            # When the argument is specified like .agg(agg_func), agg_func is applied to all columns
+            # Semantically .agg("max") can be rewritten as .agg({col_i:"max" for col_i in df.columns})
+            # To propagate the prov columns correctly, instead of the agg_func, list is used
+            # .agg("max") becomes after the normalization: .agg({col_i:"max"}.union({_prov_col_i:list}) )
             agg_dict = {col: agg_dict if not col.startswith("_prov") else self.agg_func_over_prov_cols for col in cols } #1
+
+            # if .agg is executed on a groupby object -> df.groupby("id").agg("max") and the args are normalized as before:
+            # The result becomes df.groupby("id").agg({col1:"max", col2:"max", "id":"max", "_prov0":list})
+            # the groupping column "id" needs to be excluded
             if isinstance(object_inside_preview, pd.core.groupby.generic.DataFrameGroupBy):
                 for k in groupby_keys:
                     agg_dict.pop(k, None)
@@ -68,6 +83,7 @@ class ProvenanceModule:
             d["kwargs"] = {}
             return a_dataop
 
+        #
         elif isinstance(agg_dict, list):
             agg_dict = {col: agg_dict if not col.startswith("_prov") else self.agg_func_over_prov_cols for col in cols} #2
             if isinstance(object_inside_preview, pd.core.groupby.generic.DataFrameGroupBy):

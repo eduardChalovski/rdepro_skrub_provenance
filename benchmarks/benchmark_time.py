@@ -4,7 +4,7 @@ import skrub
 
 
 # python -m monkey_patching_v02.data_provenance.benchmarking_time_mpv02
-from monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance
+from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance
 
 
 def make_dataset(n_rows: int, seed: int = 0):
@@ -169,6 +169,3 @@ if __name__ == "__main__":
     benchmark(enable_provenance=True, n_runs=5, agg_func_for_prov_cols=frozenset, output_file_name="speed_benchmark_provenance_frozenset.csv")
     benchmark(enable_provenance=True, n_runs=5, agg_func_for_prov_cols="list_reduce", output_file_name="speed_benchmark_provenance_list_reduce.csv")
     benchmark(enable_provenance=True, n_runs=5, agg_func_for_prov_cols="set_reduce", output_file_name="speed_benchmark_provenance_set_reduce.csv")
-   
-
-# python -m monkey_patching_v02.data_provenance.benchmarking_time_mpv02

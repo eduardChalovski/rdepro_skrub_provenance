@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import skrub
 
-from monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance
+from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance
 
 
 

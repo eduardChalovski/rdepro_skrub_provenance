@@ -11,10 +11,26 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from monkey_patching_v02.data_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
-from monkey_patching_v02.data_provenance.provenance_utils_jeanne_performant import decode_prov_column
+
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--track-provenance",
+    action="store_true",
+    help="Enable provenance tracking"
+)
+args = parser.parse_args()
+
+if args.track_provenance:
+    print("Provenance is enabled")
+    from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
+    enable_why_data_provenance()
+else:
+    print("Provenance is disabled")
 
 
+print("Libraries imported")
 
 
 def replace_nan_with_minus_one(x):
@@ -24,8 +40,8 @@ def replace_nan_with_minus_one(x):
         return -1 if pandas.isna(x) else x
 
 # The script you want to test
-SCRIPT = "C:/Users/eduar/Documents/RDEPro_testing/rdepro_skrub_provenance/mystuff/pipeline1_SKRUBIFIED.py"
-output_file = "C:/Users/eduar/Documents/RDEPro_testing/rdepro_skrub_provenance/output.pkl"
+SCRIPT = "./pipelines/BasicDataAnalysisCase.py"
+output_file = "./tests/output.pkl"
 # Function to run the script and capture its output
 def run_script():
     if os.path.exists(output_file):

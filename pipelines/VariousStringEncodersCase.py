@@ -40,7 +40,6 @@ else:
 
 
 print("Libraries imported")
-base_path = "C:/Users/eduar/Documents/RDEPro_github_clean/rdepro_skrub_provenance/monkey_patching_v02/data_provenance"
 
 
 customers = skrub.var("customers", pd.read_csv(f'./src/datasets/olist_customers_dataset.csv').sample(frac = 0.001))

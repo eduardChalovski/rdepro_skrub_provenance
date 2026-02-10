@@ -11,6 +11,7 @@ dependencies = [
     "imblearn>=0.0",
     "pandas>=2.3.3",
     "pytest>=9.0.2",
+    "seaborn>=0.13.2",
     "skrub>=0.7.1",
 ]
 

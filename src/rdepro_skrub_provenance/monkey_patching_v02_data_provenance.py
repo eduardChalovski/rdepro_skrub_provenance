@@ -139,8 +139,9 @@ def enter_provenance_mode_dataop(func):
             final_dict = get_dataop_dictionary(result_dataop)                         # Inspecting
             if "method_name" in final_dict.keys():                                    # Having specific attribute in the dictionary classifies what kind of DataOp it is 
                 # print(">>> THIS IS A CallMethod DataOp")
-                # # ASPJ logic is covered here
-                # # Pandas logic is covered here
+                # ASPJ logic is covered here
+                # Pandas logic is covered here
+                # The only function that is being get
                 corresponding_provenance_function = getattr(PROVENANCE_MODULE, "provenance_"+final_dict["method_name"], None)
                 if corresponding_provenance_function is not None:
                     corresponding_provenance_function(result_dataop)
@@ -221,7 +222,13 @@ def set_provenance(namespace, name_of_the_function, provenance_func=enter_proven
     setattr(wrapped, "__provenance_patch__", True)
     setattr(namespace, name_of_the_function, wrapped)
 
+# list_reduce and set_reduce are only tested in the benchmarks
 def set_reduce(values):
+    """
+    Reduces
+        
+    :param values: Description
+    """
     # If pandas gives us a 1-column DataFrame, unwrap it
     if isinstance(values, pd.DataFrame):
         values = values.iloc[:, 0]
@@ -254,6 +261,11 @@ def list_reduce(values):
 
 # region enable_provenance
 def enable_why_data_provenance(agg_func_over_prov_cols=list):
+    """
+    Monkey Patches evaluate and skrub.var.compute to track provenance ids. 
+
+    :param agg_func_over_prov_cols: function that reduces pd.Series to one object
+    """
     set_provenance(skrub._data_ops._evaluation,"evaluate", provenance_func=enter_provenance_mode_dataop)
     set_provenance(skrub._data_ops._data_ops.Var,"compute", provenance_func=enter_provenance_mode_var)
     
@@ -264,7 +276,9 @@ def enable_why_data_provenance(agg_func_over_prov_cols=list):
     else:
         PROVENANCE_MODULE.agg_func_over_prov_cols = agg_func_over_prov_cols
 
-
+"""
+Helper
+"""
 def normalize_cell(x):
     if isinstance(x, list):
         return x

@@ -145,7 +145,6 @@ predictor = X.skb.apply(model, y=y)
 learner = predictor.skb.make_learner(fitted=True)
 split = predictor.skb.train_test_split(random_state= 0)
 learner.score(split["test"])
-
 pred = learner.predict(split["test"])
 print(pred)   
 

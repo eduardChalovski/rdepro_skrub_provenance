@@ -183,7 +183,7 @@ An example is `RandomUnderSampler` from the scikit-learn–compatible imbalanced
 For `train_test_split`, provenance can be inspected via:
 
 ```
-split["train"]["_skrubimpl_X"]
+split["train"]["_skrub_X"]
 ```
 
 ---
@@ -197,7 +197,7 @@ Provenance can be inspected using:
 
 ---
 
-## Complex Pipelines
+## Pipeline use cases
 To validate the robustness of our approach, we implemented **10 complex pipelines** that combine:
 These pipelines were designed to reflect realistic data science workflows and stress-test the provenance tracking mechanism.
 
@@ -354,7 +354,62 @@ These experiments provide insight into how the system behaves under realistic wo
 ---
 
 ## How to Run
-(Add instructions here for setting up the environment, running pipelines, tests, benchmarks, and experiments.)
+Here are commands for each singiliuar pipeline and for all of them together. In general, all pipelines must be run using 
+**python -m pipelines.** with the flag **--track-provenance** in the end to run them
+
+Run all pipelines:
+Linux/MacOS:
+**./run_all_pipelines.sh**
+**powershell -ExecutionPolicy Bypass -File run_all_pipelines.ps1**
+
+Aggregated Payments:
+**python -m pipelines.AggregatedPaymentsJoinCase**
+**python -m pipelines.AggregatedPaymentsJoinCase --track-provenance**
+
+
+Basic data analysis
+**python -m pipelines.BasicDataAnalysis**
+**python -m pipelines.BasicDataAnalysisCase --track-provenance**
+
+
+Fuzzy Joiner
+**python -m pipelines.FuzzyJoinerCase**
+**python -m pipelines.FuzzyJoinerCase --track-provenance**
+
+
+Hands-on Column Selection Transformers
+**python -m pipelines.HandsOnColumnSelectionTransformersCase**
+**python -m pipelines.HandsOnColumnSelectionTransformersCase --track-provenance**
+
+
+Imbalanced Undersampling
+**python -m pipelines.ImbalancedUnderSamplingCase**
+**python -m pipelines.ImbalancedUnderSamplingCase --track-provenance**
+
+
+Joiner
+**python -m pipelines.JoinerUseCase**
+**python -m pipelines.JoinerUseCase --track-provenance**
+
+
+Leakage-safe Target Encoding
+**python -m pipelines.LeakageSafeTargetEncodingCase**
+**python -m pipelines.LeakageSafeTargetEncodingCase --track-provenance**
+
+
+Spatial Join 
+**python -m pipelines.SpatialJoinCase**
+**python -m pipelines.SpatialJoinCase --track-provenance**
+
+
+Squashing Scaler
+**python -m pipelines.SquashingScalerCase**
+**python -m pipelines.SquashingScalerCase --track-provenance**
+
+
+Various String Encoders
+**python -m pipelines.VariousStringEncodersCase**
+**python -m pipelines.VariousStringEncodersCase --track-provenance**
 
 ---
 

@@ -3,6 +3,20 @@ import pytest
 import skrub
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--track-provenance",
+        action="store_true",
+        default=False,
+        help="Enable provenance tracking during tests.",
+    )
+
+
+@pytest.fixture
+def track_provenance(request) -> bool:
+    return bool(request.config.getoption("--track-provenance"))
+
+
 @pytest.fixture
 def restore_skrub_monkeypatch():
     """

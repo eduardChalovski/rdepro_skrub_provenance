@@ -9,19 +9,8 @@
 import sys
 from pathlib import Path
 import subprocess
-def run_uv_sync():
-    """Install dependencies via uv before running the rest of the pipeline"""
-    try:
-        # Use subprocess to run shell commands
-        subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
-        print("✅ uv dependencies installed successfully")
-    except subprocess.CalledProcessError as e:
-        print("❌ uv install failed")
-        print(e)
-        sys.exit(1)
-
-# Run this first
-run_uv_sync()
+print("Installing dependencies from uv.lock using PDM...")
+subprocess.check_call([sys.executable, "-m", "pdm", "install"])
 print("Done!")
 import argparse
 

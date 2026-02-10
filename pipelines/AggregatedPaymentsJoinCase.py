@@ -4,7 +4,6 @@
 # Run:
 #   python -m pipelines.AggregatedPaymentsJoinCase
 #   python -m pipelines.AggregatedPaymentsJoinCase --track-provenance
-
 import sys
 import subprocess
 print("Installing dependencies from uv.lock using PDM...")

@@ -7,7 +7,6 @@
 
 #Here we use the multiple string encoders case
 # pip install sentence_transformers
-
 import sys
 import subprocess
 def run_uv_sync():
@@ -214,4 +213,3 @@ def plot_box_results(named_results):
     )
     plt.show()
 plot_box_results(results)
-

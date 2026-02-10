@@ -18,8 +18,6 @@
 
 # snakeviz .\pipeline1_SKRUBIFIED_with_provenance_profile.out
 # snakeviz .\pipeline1_SKRUBIFIED_without_provenance_profile.out
-
-
 import sys
 import subprocess
 def run_uv_sync():

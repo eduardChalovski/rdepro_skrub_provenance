@@ -18,9 +18,22 @@
 
 # snakeviz .\pipeline1_SKRUBIFIED_with_provenance_profile.out
 # snakeviz .\pipeline1_SKRUBIFIED_without_provenance_profile.out
-
-
 import sys
+import subprocess
+def run_uv_sync():
+    """Install dependencies via uv before running the rest of the pipeline"""
+    try:
+        # Use subprocess to run shell commands
+        subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
+        print("✅ uv dependencies installed successfully")
+    except subprocess.CalledProcessError as e:
+        print("❌ uv install failed")
+        print(e)
+        sys.exit(1)
+
+# Run this first
+run_uv_sync()
+print("Done!")
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -132,7 +145,6 @@ predictor = X.skb.apply(model, y=y)
 learner = predictor.skb.make_learner(fitted=True)
 split = predictor.skb.train_test_split(random_state= 0)
 learner.score(split["test"])
-
 pred = learner.predict(split["test"])
 print(pred)   
 

@@ -1,6 +1,20 @@
 import sys
 from pathlib import Path
+import subprocess
+def run_uv_sync():
+    """Install dependencies via uv before running the rest of the pipeline"""
+    try:
+        # Use subprocess to run shell commands
+        subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
+        print("✅ uv dependencies installed successfully")
+    except subprocess.CalledProcessError as e:
+        print("❌ uv install failed")
+        print(e)
+        sys.exit(1)
 
+# Run this first
+run_uv_sync()
+print("Done!")
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 from skrub import fuzzy_join
 import pandas as pd
@@ -32,13 +46,13 @@ else:
     print("Provenance is disabled")
 
 
-customers = skrub.var("customers", pd.read_csv(f'./src/datasets/olist_customers_dataset.csv'))
-orders = skrub.var("orders", pd.read_csv(f'./src/datasets/olist_orders_dataset.csv'))
-order_items = skrub.var("order_items", pd.read_csv(f'./src/datasets/olist_order_items_dataset.csv'))
-payments = skrub.var("payments",pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv'))
-reviews = skrub.var("reviews",pd.read_csv(f'./src/datasets/olist_order_reviews_dataset.csv'))
-order_payments = skrub.var("order_payments", pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv'))
-geolocation = skrub.var("geolocation", pd.read_csv(f'./src/datasets/olist_geolocation_dataset.csv'))
+customers = skrub.var("customers", pd.read_csv(f'./src/datasets/olist_customers_dataset.csv').sample(frac = 0.01))
+orders = skrub.var("orders", pd.read_csv(f'./src/datasets/olist_orders_dataset.csv').sample(frac = 0.01))
+order_items = skrub.var("order_items", pd.read_csv(f'./src/datasets/olist_order_items_dataset.csv').sample(frac = 0.01))
+payments = skrub.var("payments",pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv').sample(frac = 0.01))
+reviews = skrub.var("reviews",pd.read_csv(f'./src/datasets/olist_order_reviews_dataset.csv').sample(frac = 0.01))
+order_payments = skrub.var("order_payments", pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv').sample(frac = 0.01))
+geolocation = skrub.var("geolocation", pd.read_csv(f'./src/datasets/olist_geolocation_dataset.csv').sample(frac = 0.01))
 
 
 

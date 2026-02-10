@@ -6,6 +6,21 @@
 #   python -m pipelines.ImbalancedUnderSamplingCase --track-provenance
 
 import sys
+import subprocess
+def run_uv_sync():
+    """Install dependencies via uv before running the rest of the pipeline"""
+    try:
+        # Use subprocess to run shell commands
+        subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
+        print("✅ uv dependencies installed successfully")
+    except subprocess.CalledProcessError as e:
+        print("❌ uv install failed")
+        print(e)
+        sys.exit(1)
+
+# Run this first
+run_uv_sync()
+print("Done!")
 from pathlib import Path
 import argparse
 
@@ -115,8 +130,19 @@ preprocessor = ColumnTransformer(
     remainder="drop",
 )
 
-X_train_enc = preprocessor.fit_transform(X_train)
-X_test_enc = preprocessor.transform(X_test)
+X = Xraw.skb.apply(preprocessor).skb.mark_as_X()
+
+
+dummy_model = HistGradientBoostingClassifier(random_state=0)
+predictor = X.skb.apply(dummy_model, y=y)
+split = predictor.skb.train_test_split(random_state=0)
+
+X_train = split["train"]["_skrub_X"]
+y_train = split["train"]["_skrub_y"]
+X_test = split["test"]["_skrub_X"]
+y_test = split["test"]["_skrub_y"]
+
+print("Before undersampling:", X_train.shape, y_train.shape)
 
 rus = RandomUnderSampler(random_state=0)
 X_train2, y_train2 = rus.fit_resample(X_train_enc, y_train)

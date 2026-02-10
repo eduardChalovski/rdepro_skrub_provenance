@@ -8,6 +8,10 @@
 
 import sys
 from pathlib import Path
+import subprocess
+print("Installing dependencies from uv.lock using PDM...")
+subprocess.check_call([sys.executable, "-m", "pdm", "install"])
+print("Done!")
 import argparse
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -157,8 +161,9 @@ print(f"Test accuracy: {score}")
 # Optional: inspect provenance
 if args.track_provenance:
     try:
+        print(split["test"])
         print("Provenance sample (first rows):")
-        prov = evaluate_provenance(split["test"]["_skrubimpl_X"])
+        prov = evaluate_provenance(split["test"]["_skrub_X"])
         print(prov.head())
     except Exception as e:
         print("Could not evaluate provenance here:", repr(e))

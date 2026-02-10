@@ -7,8 +7,22 @@
 
 #Here we use the multiple string encoders case
 # pip install sentence_transformers
-
 import sys
+import subprocess
+def run_uv_sync():
+    """Install dependencies via uv before running the rest of the pipeline"""
+    try:
+        # Use subprocess to run shell commands
+        subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
+        print("✅ uv dependencies installed successfully")
+    except subprocess.CalledProcessError as e:
+        print("❌ uv install failed")
+        print(e)
+        sys.exit(1)
+
+# Run this first
+run_uv_sync()
+print("Done!")
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -199,4 +213,3 @@ def plot_box_results(named_results):
     )
     plt.show()
 plot_box_results(results)
-

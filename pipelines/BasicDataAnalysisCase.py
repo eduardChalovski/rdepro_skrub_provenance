@@ -11,13 +11,10 @@ def run_uv_sync():
         print("❌ uv install failed")
         print(e)
         sys.exit(1)
-
-# Run this first
 run_uv_sync()
 print("Done!")
 print("Done!")
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-
 
 # End-to-End Data Analysis
 # =====================================================
@@ -29,16 +26,11 @@ customer satisfaction, and key operational drivers.
 """
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import seaborn as sns
-import os
 import skrub
 from skrub import ToDatetime
-from skrub import TableReport
 sns.set(style="whitegrid")
-
 import argparse
-
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--track-provenance",
@@ -46,15 +38,12 @@ parser.add_argument(
     help="Enable provenance tracking"
 )
 args = parser.parse_args()
-
 if args.track_provenance:
     print("Provenance is enabled")
     from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
     enable_why_data_provenance()
 else:
     print("Provenance is disabled")
-
-
 
 customers = skrub.var("customers", pd.read_csv(f'./src/datasets/olist_customers_dataset.csv'))
 orders =  pd.read_csv(f'./src/datasets/olist_orders_dataset.csv')

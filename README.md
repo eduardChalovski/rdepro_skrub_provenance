@@ -360,6 +360,9 @@ Here are commands for each singiliuar pipeline and for all of them together. In 
 Run all pipelines:
 Linux/MacOS:
 **./run_all_pipelines.sh**
+
+
+Windows:
 **powershell -ExecutionPolicy Bypass -File run_all_pipelines.ps1**
 
 Aggregated Payments:
@@ -424,7 +427,7 @@ Various String Encoders
 ---
 
 ## Authors
-- Teodor
+- Teodor Aleksiev 0530377
 - Jeanne
 - Yigit
 - Eduard Chalovski

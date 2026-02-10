@@ -1,12 +1,3 @@
-#Use case: Predicting product return risk in e-commerce
-#Problem
-
-#An e-commerce company wants to predict whether an order will be returned based on textual product information and
-#customer-written fields.
-
-
-#Here we use the multiple string encoders case
-# pip install sentence_transformers
 import sys
 import subprocess
 def run_uv_sync():
@@ -19,24 +10,14 @@ def run_uv_sync():
         print("❌ uv install failed")
         print(e)
         sys.exit(1)
-
-# Run this first
 run_uv_sync()
-print("Done!")
 from pathlib import Path
-
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-
-from skrub import TableVectorizer, GapEncoder, StringEncoder, TextEncoder, MinHashEncoder
-from sklearn.pipeline import make_pipeline
+from skrub import TableVectorizer, GapEncoder, TextEncoder, MinHashEncoder
 from sklearn.ensemble import HistGradientBoostingClassifier
-from sklearn.model_selection import cross_validate
 import skrub
 import pandas as pd
-import numpy as np
-
 import argparse
-
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--track-provenance",
@@ -44,17 +25,13 @@ parser.add_argument(
     help="Enable provenance tracking"
 )
 args = parser.parse_args()
-
 if args.track_provenance:
     print("Provenance is enabled")
     from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
     enable_why_data_provenance()
 else:
     print("Provenance is disabled")
-
-
 print("Libraries imported")
-
 
 customers = skrub.var("customers", pd.read_csv(f'./src/datasets/olist_customers_dataset.csv').sample(frac = 0.001))
 orders = skrub.var("orders", pd.read_csv(f'./src/datasets/olist_orders_dataset.csv').sample(frac = 0.001))
@@ -65,7 +42,6 @@ order_payments = skrub.var("order_payments", pd.read_csv(f'./src/datasets/olist_
 geolocation = skrub.var("geolocation", pd.read_csv(f'./src/datasets/olist_geolocation_dataset.csv').sample(frac = 0.001))
 products = skrub.var("products", pd.read_csv(f'./src/datasets/olist_products_dataset.csv').sample(frac = 0.001))
 
-
 orders_feat = orders
 
 orders_feat = orders_feat.assign(is_late =  (
@@ -74,21 +50,12 @@ orders_feat = orders_feat.assign(is_late =  (
 ).astype(int)
 )
 
-
 orders_feat = orders_feat.skb.select([
     "order_id",
     "customer_id",
     "order_purchase_timestamp",
     "is_late",
 ])
-
-
-# orders_feat = orders_feat[[
-#     "order_id",
-#     "customer_id",
-#     "order_purchase_timestamp",
-#     "is_late",
-# ]]
 
 order_items_agg = (
     order_items
@@ -128,12 +95,6 @@ customer_features = customers.skb.select([
     "customer_state",
 ])
 
-# customer_features = customers[[
-#     "customer_id",
-#     "customer_city",
-#     "customer_state",
-# ]]
-
 df = (
     orders_feat
     .merge(order_items_agg, on="order_id", how="left")
@@ -153,7 +114,6 @@ text_encoder = TextEncoder(
 
 vectorizerText = TableVectorizer(high_cardinality= text_encoder)
 
-
 gapPipe = X.skb.apply(vectorizerGap)
 print("gapPipe provenance:")
 print(gapPipe.columns)
@@ -163,6 +123,7 @@ gapPipe = gapPipe.skb.apply( HistGradientBoostingClassifier(
         learning_rate=0.05,
         random_state=0,
     ), y = y)
+
 hashPipe = X.skb.apply(vectorizerHash)
 print("hashPipe provenacne:")
 print(hashPipe.columns)
@@ -172,22 +133,20 @@ hashPipe = hashPipe.skb.apply( HistGradientBoostingClassifier(
         learning_rate=0.05,
         random_state=0,
     ), y = y)
+
 textPipe = X.skb.apply(vectorizerText)
 print("textPipe provenance:")
 print(textPipe.columns)
 print(textPipe[:10])
-
 textPipe = textPipe.skb.apply( HistGradientBoostingClassifier(
         max_depth=6,
         learning_rate=0.05,
         random_state=0,
     ), y = y)
 
-
 #gapLearner = gapPipe.skb.make_learner(fitted=True)
 #hashLearner = hashPipe.skb.make_learner(fitted=True)
 #textLearner = textPipe.skb.make_learner(fitted=True)
-
 
 gapResults = gapPipe.skb.cross_validate(cv=2)
 textResults = hashPipe.skb.cross_validate(cv=2)

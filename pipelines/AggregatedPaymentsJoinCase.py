@@ -1,9 +1,3 @@
-# Aggregated Payments Join Pipeline (Skrub + Provenance)
-# Goal: predict whether an order will be delivered late using aggregated payment information.
-#
-# Run:
-#   python -m pipelines.AggregatedPaymentsJoinCase
-#   python -m pipelines.AggregatedPaymentsJoinCase --track-provenance
 import sys
 import subprocess
 print("Installing dependencies from uv.lock using PDM...")
@@ -17,8 +11,6 @@ def run_uv_sync():
         print("❌ uv install failed")
         print(e)
         sys.exit(1)
-
-# Run this first
 run_uv_sync()
 print("Done!")
 from pathlib import Path
@@ -33,12 +25,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.ensemble import HistGradientBoostingClassifier
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--track-provenance", action="store_true")
 args = parser.parse_args()
-
 if args.track_provenance:
     print("Provenance is enabled")
     from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance
@@ -51,7 +40,6 @@ orders = skrub.var("orders", pd.read_csv("./src/datasets/olist_orders_dataset.cs
 payments = skrub.var("payments", pd.read_csv("./src/datasets/olist_order_payments_dataset.csv"))
 
 print("Datasets loaded")
-
 
 payments_agg = (
     payments
@@ -73,7 +61,6 @@ payments_agg = payments_agg.assign(
     payment_type_count=lambda d: d["payment_type_count"].fillna(0),
 )
 
-
 orders_full = orders.merge(payments_agg, on="order_id", how="left")
 
 # Parse dates 
@@ -88,7 +75,6 @@ orders_full = orders_full.assign(
 )
 
 print("Join and target creation done")
-
 
 numeric_features = ["total_payment", "n_payments", "max_installments", "payment_type_count"]
 categorical_features = ["order_status"]
@@ -114,7 +100,6 @@ preprocessor = ColumnTransformer(
 )
 
 X = Xraw.skb.apply(preprocessor).skb.mark_as_X()
-
 
 model = HistGradientBoostingClassifier(random_state=0)
 predictor = X.skb.apply(model, y=y)

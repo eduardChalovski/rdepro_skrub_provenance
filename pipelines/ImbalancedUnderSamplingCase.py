@@ -1,10 +1,3 @@
-# Imbalanced Learning with RandomUnderSampler (Skrub + Provenance)
-# Goal: predict late deliveries, and use a sampler that changes the number of rows.
-#
-# Run:
-#   python -m pipelines.ImbalancedUnderSamplingCase
-#   python -m pipelines.ImbalancedUnderSamplingCase --track-provenance
-
 import sys
 import subprocess
 def run_uv_sync():
@@ -17,24 +10,18 @@ def run_uv_sync():
         print("❌ uv install failed")
         print(e)
         sys.exit(1)
-
-# Run this first
 run_uv_sync()
 print("Done!")
 from pathlib import Path
 import argparse
-
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-
 import pandas as pd
 import skrub
-
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.ensemble import HistGradientBoostingClassifier
-
 from imblearn.under_sampling import RandomUnderSampler
 
 
@@ -145,4 +132,3 @@ model.fit(X_train2, y_train2)
 
 score = model.score(X_test, y_test)
 print(f"Test accuracy: {score}")
-

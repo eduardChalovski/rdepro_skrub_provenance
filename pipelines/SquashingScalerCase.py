@@ -1,23 +1,3 @@
-#Where SquashingScaler fits (the key insight)
-#REMOVE OUTLIERS
-#“Which customers are likely to generate high future revenue, despite extreme or irregular purchasing behavior?”
-
-# To run the script execute this line from the root project directory:
-# python -m pipelines.pipeline1_SKRUBIFIED --track-provenance
-# python -m pipelines.SquashingScalerCase --track-provenance
-
-# python -m cProfile -o pipeline1_SKRUBIFIED_with_provenance_pd_integer_array_profile.out .\mystuff\pipeline1_SKRUBIFIED.py --track-provenance
-# python -m cProfile -o pipeline1_SKRUBIFIED_with_provenance_profile.out .\pipelines\SquashingScalerCase.py --track-provenance
-
-# python -m cProfile -o pipeline1_SKRUBIFIED_without_provenance_profile.out .\pipelines\SquashingScalerCase.py
-
-# "sort cumtime`nstats 200`nquit" | python -m pstats .\pipeline1_SKRUBIFIED_with_provenance_frozenset_profile.out
-# "sort cumtime`nstats 200`nquit" | python -m pstats .\pipeline1_SKRUBIFIED_with_provenance_profile.out
-# "sort cumtime`nstats 200`nquit" | python -m pstats .\pipeline1_SKRUBIFIED_without_provenance_profile.out
-
-
-# snakeviz .\pipeline1_SKRUBIFIED_with_provenance_profile.out
-# snakeviz .\pipeline1_SKRUBIFIED_without_provenance_profile.out
 import sys
 import subprocess
 def run_uv_sync():
@@ -30,27 +10,18 @@ def run_uv_sync():
         print("❌ uv install failed")
         print(e)
         sys.exit(1)
-
-# Run this first
 run_uv_sync()
 print("Done!")
 from pathlib import Path
-
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-
 import pandas as pd
-import numpy as np
-from sklearn.pipeline import make_pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.ensemble import HistGradientBoostingRegressor
-from sklearn.model_selection import cross_validate
 import skrub
 from sklearn.pipeline import Pipeline
 from skrub import SquashingScaler 
-
 import argparse
-
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--track-provenance",
@@ -58,17 +29,14 @@ parser.add_argument(
     help="Enable provenance tracking"
 )
 args = parser.parse_args()
-
 if args.track_provenance:
     print("Provenance is enabled")
     from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
     enable_why_data_provenance()
 else:
     print("Provenance is disabled")
-
-
 print("Libraries imported")
-# base_path = "C:/Users/eduar/Documents/RDEPro_testing/rdepro_skrub_provenance"
+
 customers = skrub.var("customers", pd.read_csv(f'./src/datasets/olist_customers_dataset.csv'))
 orders = skrub.var("orders", pd.read_csv(f'./src/datasets/olist_orders_dataset.csv'))
 order_items = skrub.var("order_items", pd.read_csv(f'./src/datasets/olist_order_items_dataset.csv'))
@@ -77,7 +45,6 @@ reviews = skrub.var("reviews",pd.read_csv(f'./src/datasets/olist_order_reviews_d
 order_payments = skrub.var("order_payments", pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv'))
 geolocation = skrub.var("geolocation", pd.read_csv(f'./src/datasets/olist_geolocation_dataset.csv'))
 print("Files read, starting the preprocessing")
-
 
 order_items_agg = order_items.groupby('order_id').agg(
     total_items=('order_item_id', 'count'),
@@ -97,7 +64,6 @@ orders_full = orders_full.assign(total_items = orders_full['total_items'].fillna
 orders_full = orders_full.assign(total_price = orders_full['total_price'].fillna(0))
 orders_full = orders_full.assign(total_freight = orders_full['total_freight'].fillna(0))
 orders_full = orders_full.assign(total_payment = orders_full['total_payment'].fillna(0))
-
 
 customer_features = orders_full.groupby('customer_id').agg(
     n_orders=('order_id', 'count'),
@@ -147,7 +113,6 @@ split = predictor.skb.train_test_split(random_state= 0)
 learner.score(split["test"])
 pred = learner.predict(split["test"])
 print(pred)   
-
 
 #customer_features = customer_features.assign(predicted_sum_payment =  learner.predict(split["test"]))
 #cv_results = customer_features['predicted_sum_payment'].skb.cross_validate(cv = 5, return_train_score = True)

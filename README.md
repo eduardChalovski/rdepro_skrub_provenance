@@ -230,6 +230,11 @@ The target variable y is set as the total sum of payments per customer (sum_paym
 
 Each encoded version of X is then used to train a HistGradientBoostingClassifier to predict is_late. The pipeline evaluates performance via cross-validation (cv=2) and stores results for each encoder type.
 
+**Hands-On with Column Selection and Transformers**
+This pipeline demonstrates how explicit column selection and heterogeneous feature transformations can be integrated into a skrub DataOps workflow while preserving provenance information. It focuses on a late-delivery prediction task in an e-commerce setting, using the Olist datasets.
+The pipeline begins by loading and joining multiple raw tables, including orders, order items, payments, products, customers, and product category translations. These tables are merged at the order level to create a unified dataset containing transactional, product, payment, and customer-location information. Date columns are parsed into datetime objects, and a binary target variable is_late is created by comparing the actual delivery date to the estimated delivery date.
+A key aspect of this pipeline is its hands-on approach to column selection and transformation. Instead of relying on automatic vectorization, features are explicitly grouped into datetime, numeric, and categorical subsets. Datetime features (such as the purchase timestamp) are encoded using a dedicated datetime transformer, numeric features are imputed and scaled, and categorical features are imputed and one-hot encoded. All projections are performed using df.skb.select(...) to ensure that provenance columns are correctly propagated when provenance tracking is enabled.
+The transformed feature matrix is then passed to a HistGradientBoostingClassifier within the skrub framework. The pipeline uses skrub’s apply, mark_as_X, mark_as_y, and train_test_split mechanisms to build, train, and evaluate the model in a reproducible manner. This pipeline illustrates how fine-grained control over column selection and preprocessing can coexist with skrub’s DataOps abstraction, while remaining compatible with row-level provenance tracking.
 ---
 
 ## Testing
@@ -258,6 +263,7 @@ Compares the two DataFrames with .equals().
 
 Result: -> Prints ✅ if the outputs are identical, ❌ if they differ.
 This test might not be functional if the sampling is still turned on when reading from the file. When turned off, this test works
+
 
 ---
 

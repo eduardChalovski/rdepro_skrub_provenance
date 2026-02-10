@@ -113,10 +113,10 @@ dummy_model = HistGradientBoostingClassifier(random_state=0)
 predictor = X.skb.apply(dummy_model, y=y)
 split = predictor.skb.train_test_split(random_state=0)
 
-X_train = split["train"]["_skrubimpl_X"]
-y_train = split["train"]["_skrubimpl_y"]
-X_test = split["test"]["_skrubimpl_X"]
-y_test = split["test"]["_skrubimpl_y"]
+X_train = split["train"]["_skrub_X"]
+y_train = split["train"]["_skrub_y"]
+X_test = split["test"]["_skrub_X"]
+y_test = split["test"]["_skrub_y"]
 
 print("Before undersampling:", X_train.shape, y_train.shape)
 

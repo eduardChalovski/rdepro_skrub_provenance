@@ -1,6 +1,9 @@
 import sys
 from pathlib import Path
-
+import subprocess
+print("Installing dependencies from uv.lock using PDM...")
+subprocess.check_call([sys.executable, "-m", "pdm", "install"])
+print("Done!")
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 from skrub import fuzzy_join
 import pandas as pd
@@ -32,13 +35,13 @@ else:
     print("Provenance is disabled")
 
 
-customers = skrub.var("customers", pd.read_csv(f'./src/datasets/olist_customers_dataset.csv'))
-orders = skrub.var("orders", pd.read_csv(f'./src/datasets/olist_orders_dataset.csv'))
-order_items = skrub.var("order_items", pd.read_csv(f'./src/datasets/olist_order_items_dataset.csv'))
-payments = skrub.var("payments",pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv'))
-reviews = skrub.var("reviews",pd.read_csv(f'./src/datasets/olist_order_reviews_dataset.csv'))
-order_payments = skrub.var("order_payments", pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv'))
-geolocation = skrub.var("geolocation", pd.read_csv(f'./src/datasets/olist_geolocation_dataset.csv'))
+customers = skrub.var("customers", pd.read_csv(f'./src/datasets/olist_customers_dataset.csv').sample(frac = 0.01))
+orders = skrub.var("orders", pd.read_csv(f'./src/datasets/olist_orders_dataset.csv').sample(frac = 0.01))
+order_items = skrub.var("order_items", pd.read_csv(f'./src/datasets/olist_order_items_dataset.csv').sample(frac = 0.01))
+payments = skrub.var("payments",pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv').sample(frac = 0.01))
+reviews = skrub.var("reviews",pd.read_csv(f'./src/datasets/olist_order_reviews_dataset.csv').sample(frac = 0.01))
+order_payments = skrub.var("order_payments", pd.read_csv(f'./src/datasets/olist_order_payments_dataset.csv').sample(frac = 0.01))
+geolocation = skrub.var("geolocation", pd.read_csv(f'./src/datasets/olist_geolocation_dataset.csv').sample(frac = 0.01))
 
 
 

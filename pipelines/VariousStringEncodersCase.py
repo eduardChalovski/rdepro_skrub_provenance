@@ -9,6 +9,10 @@
 # pip install sentence_transformers
 
 import sys
+import subprocess
+print("Installing dependencies from uv.lock using PDM...")
+subprocess.check_call([sys.executable, "-m", "pdm", "install"])
+print("Done!")
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))

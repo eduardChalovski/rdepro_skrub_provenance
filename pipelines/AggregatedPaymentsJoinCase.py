@@ -2,6 +2,7 @@
 # Goal: predict whether an order will be delivered late using aggregated payment information.
 #
 # Run:
+#   python -m pipelines.AggregatedPaymentsJoinCase
 #   python -m pipelines.AggregatedPaymentsJoinCase --track-provenance
 
 import sys
@@ -16,9 +17,13 @@ import skrub
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
 from sklearn.ensemble import HistGradientBoostingClassifier
 
 
+# -------------------------------------------------
+# CLI arguments
+# -------------------------------------------------
 parser = argparse.ArgumentParser()
 parser.add_argument("--track-provenance", action="store_true")
 args = parser.parse_args()
@@ -31,19 +36,18 @@ else:
     print("Provenance is disabled")
 
 
-orders = skrub.var(
-    "orders",
-    pd.read_csv("./src/datasets/olist_orders_dataset.csv")
-)
-payments = skrub.var(
-    "payments",
-    pd.read_csv("./src/datasets/olist_order_payments_dataset.csv")
-)
+# -------------------------------------------------
+# 1) LOAD DATA
+# -------------------------------------------------
+orders = skrub.var("orders", pd.read_csv("./src/datasets/olist_orders_dataset.csv"))
+payments = skrub.var("payments", pd.read_csv("./src/datasets/olist_order_payments_dataset.csv"))
 
 print("Datasets loaded")
 
 
-
+# -------------------------------------------------
+# 2) AGGREGATE PAYMENTS AT ORDER LEVEL
+# -------------------------------------------------
 payments_agg = (
     payments
     .groupby("order_id")
@@ -56,62 +60,66 @@ payments_agg = (
     .reset_index()
 )
 
-# Fill missing values (orders without payments)
-for col in payments_agg.columns:
-    if col != "order_id":
-        payments_agg[col] = payments_agg[col].fillna(0)
-
-
-
-orders_full = orders.merge(
-    payments_agg,
-    on="order_id",
-    how="left"
+# Fill missing values (DataOps-friendly)
+payments_agg = payments_agg.assign(
+    total_payment=lambda d: d["total_payment"].fillna(0),
+    n_payments=lambda d: d["n_payments"].fillna(0),
+    max_installments=lambda d: d["max_installments"].fillna(0),
+    payment_type_count=lambda d: d["payment_type_count"].fillna(0),
 )
 
-# Parse dates
+
+# -------------------------------------------------
+# 3) JOIN AGGREGATED PAYMENTS WITH ORDERS
+# -------------------------------------------------
+orders_full = orders.merge(payments_agg, on="order_id", how="left")
+
+# Parse dates (DataOps-friendly: use lambdas)
 orders_full = orders_full.assign(
-    order_delivered_customer_date=pd.to_datetime(
-        orders_full["order_delivered_customer_date"], errors="coerce"
-    ),
-    order_estimated_delivery_date=pd.to_datetime(
-        orders_full["order_estimated_delivery_date"], errors="coerce"
-    ),
+    order_delivered_customer_date=lambda d: pd.to_datetime(d["order_delivered_customer_date"], errors="coerce"),
+    order_estimated_delivery_date=lambda d: pd.to_datetime(d["order_estimated_delivery_date"], errors="coerce"),
 )
 
-# Target: late delivery
+# Target: late delivery (must also be DataOps-friendly: use lambda)
 orders_full = orders_full.assign(
-    is_late=(
-        orders_full["order_delivered_customer_date"]
-        > orders_full["order_estimated_delivery_date"]
-    ).fillna(False).astype(int)
+    is_late=lambda d: (d["order_delivered_customer_date"] > d["order_estimated_delivery_date"]).fillna(False).astype(int)
 )
 
 print("Join and target creation done")
 
 
-numeric_features = [
-    "total_payment",
-    "n_payments",
-    "max_installments",
-    "payment_type_count",
-]
-
+# -------------------------------------------------
+# 4) FEATURES + PREPROCESSING
+# -------------------------------------------------
+numeric_features = ["total_payment", "n_payments", "max_installments", "payment_type_count"]
 categorical_features = ["order_status"]
 
 Xraw = orders_full.skb.select(numeric_features + categorical_features)
 y = orders_full["is_late"].skb.mark_as_y()
 
+# Make preprocessing robust and compatible with pandas output
+ohe = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+
 preprocessor = ColumnTransformer(
     transformers=[
-        ("num", StandardScaler(), numeric_features),
-        ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features),
-    ]
+        ("num", Pipeline([
+            ("impute", SimpleImputer(strategy="median")),
+            ("scale", StandardScaler()),
+        ]), numeric_features),
+        ("cat", Pipeline([
+            ("impute", SimpleImputer(strategy="most_frequent")),
+            ("ohe", ohe),
+        ]), categorical_features),
+    ],
+    remainder="drop",
 )
 
 X = Xraw.skb.apply(preprocessor).skb.mark_as_X()
 
 
+# -------------------------------------------------
+# 5) MODEL & EVALUATION
+# -------------------------------------------------
 model = HistGradientBoostingClassifier(random_state=0)
 predictor = X.skb.apply(model, y=y)
 

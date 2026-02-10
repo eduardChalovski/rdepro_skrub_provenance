@@ -2,6 +2,7 @@
 # Goal: predict late deliveries, and use a sampler that changes the number of rows.
 #
 # Run:
+#   python -m pipelines.ImbalancedUnderSamplingCase
 #   python -m pipelines.ImbalancedUnderSamplingCase --track-provenance
 
 import sys
@@ -16,12 +17,15 @@ import skrub
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
 from sklearn.ensemble import HistGradientBoostingClassifier
 
-# imbalanced-learn
 from imblearn.under_sampling import RandomUnderSampler
 
 
+# -------------------------------------------------
+# CLI arguments
+# -------------------------------------------------
 parser = argparse.ArgumentParser()
 parser.add_argument("--track-provenance", action="store_true")
 args = parser.parse_args()
@@ -34,6 +38,9 @@ else:
     print("Provenance is disabled")
 
 
+# -------------------------------------------------
+# 1) LOAD DATA
+# -------------------------------------------------
 orders = skrub.var("orders", pd.read_csv("./src/datasets/olist_orders_dataset.csv"))
 order_items = skrub.var("order_items", pd.read_csv("./src/datasets/olist_order_items_dataset.csv"))
 payments = skrub.var("payments", pd.read_csv("./src/datasets/olist_order_payments_dataset.csv"))
@@ -42,6 +49,9 @@ customers = skrub.var("customers", pd.read_csv("./src/datasets/olist_customers_d
 print("Datasets loaded")
 
 
+# -------------------------------------------------
+# 2) JOIN + TARGET (DataOps-friendly)
+# -------------------------------------------------
 df = (
     orders
     .merge(order_items, on="order_id", how="left")
@@ -50,50 +60,75 @@ df = (
 )
 
 df = df.assign(
-    order_delivered_customer_date=pd.to_datetime(df["order_delivered_customer_date"], errors="coerce"),
-    order_estimated_delivery_date=pd.to_datetime(df["order_estimated_delivery_date"], errors="coerce"),
+    order_delivered_customer_date=lambda d: pd.to_datetime(d["order_delivered_customer_date"], errors="coerce"),
+    order_estimated_delivery_date=lambda d: pd.to_datetime(d["order_estimated_delivery_date"], errors="coerce"),
 )
 
 df = df.assign(
-    is_late=(df["order_delivered_customer_date"] > df["order_estimated_delivery_date"]).fillna(False).astype(int)
+    is_late=lambda d: (d["order_delivered_customer_date"] > d["order_estimated_delivery_date"]).fillna(False).astype(int)
 )
 
-# simple features
+# Simple features (also use lambdas)
 df = df.assign(
-    payment_value=df["payment_value"].fillna(0),
-    payment_installments=df["payment_installments"].fillna(0),
-    price=df["price"].fillna(0),
-    freight_value=df["freight_value"].fillna(0),
+    payment_value=lambda d: d["payment_value"].fillna(0),
+    payment_installments=lambda d: d["payment_installments"].fillna(0),
+    price=lambda d: d["price"].fillna(0),
+    freight_value=lambda d: d["freight_value"].fillna(0),
+    payment_type=lambda d: d["payment_type"].fillna("unknown"),
+    customer_state=lambda d: d["customer_state"].fillna("unknown"),
 )
 
-feature_cols = ["payment_value", "payment_installments", "price", "freight_value", "payment_type", "customer_state"]
+feature_cols = [
+    "payment_value",
+    "payment_installments",
+    "price",
+    "freight_value",
+    "payment_type",
+    "customer_state",
+]
 
 Xraw = df.skb.select(feature_cols)
 y = df["is_late"].skb.mark_as_y()
 
-print("Target distribution:")
-print(df["is_late"].value_counts(dropna=False))
+print("Target distribution (preview):")
+try:
+    # preview() forces evaluation and can be slow, but it gives a real distribution
+    print(df.skb.preview()["is_late"].value_counts(dropna=False))
+except Exception as e:
+    print("Could not compute preview distribution:", repr(e))
 
 
-
+# -------------------------------------------------
+# 3) PREPROCESSING
+# -------------------------------------------------
 numeric_features = ["payment_value", "payment_installments", "price", "freight_value"]
 categorical_features = ["payment_type", "customer_state"]
 
+# Dense output for pandas
+ohe = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+
 preprocessor = ColumnTransformer(
     transformers=[
-        ("num", StandardScaler(), numeric_features),
-        ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features),
-    ]
+        ("num", Pipeline([
+            ("impute", SimpleImputer(strategy="median")),
+            ("scale", StandardScaler()),
+        ]), numeric_features),
+        ("cat", Pipeline([
+            ("impute", SimpleImputer(strategy="most_frequent")),
+            ("ohe", ohe),
+        ]), categorical_features),
+    ],
+    remainder="drop",
 )
-
-# We first transform X into numeric matrix, then apply undersampling, then fit the model.
-# This keeps the code simple and makes it easier to see what happens with row counts.
 
 X = Xraw.skb.apply(preprocessor).skb.mark_as_X()
 
+
+# -------------------------------------------------
+# 4) SPLIT + UNDERSAMPLING + MODEL
+# -------------------------------------------------
 dummy_model = HistGradientBoostingClassifier(random_state=0)
 predictor = X.skb.apply(dummy_model, y=y)
-
 split = predictor.skb.train_test_split(random_state=0)
 
 X_train = split["train"]["_skrubimpl_X"]
@@ -108,10 +143,9 @@ X_train2, y_train2 = rus.fit_resample(X_train, y_train)
 
 print("After undersampling:", X_train2.shape, y_train2.shape)
 
-
-
 model = HistGradientBoostingClassifier(random_state=0)
 model.fit(X_train2, y_train2)
 
 score = model.score(X_test, y_test)
 print(f"Test accuracy: {score}")
+

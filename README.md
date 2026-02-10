@@ -1,5 +1,30 @@
 # Provenance Tracking for Skrub Data Ops Pipelines
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Motivation](#motivation)
+- [Provenance Tracking in skrub](#provenance-tracking-in-skrub)
+  - [Design Goals](#design-goals)
+  - [Implementation Details](#implementation-details)
+    - [Code Location](#code-location)
+    - [Main Components](#main-components)
+- [Supported Operations](#supported-operations)
+  - [ASPJ Pandas Operations](#aspj-pandas-operations)
+  - [scikit-learn Estimators](#scikit-learn-estimators)
+  - [Train/Test Split](#traintest-split)
+- [Inspecting Provenance](#inspecting-provenance)
+- [Pipeline Use Cases](#pipeline-use-cases)
+- [Testing](#testing)
+- [Benchmarks](#benchmarks)
+- [Experiments](#experiments)
+- [Project Structure](#project-structure)
+- [How to Run](#how-to-run)
+- [Results and Discussion](#results-and-discussion)
+- [Limitations and Future Work](#limitations-and-future-work)
+- [Authors](#authors)
+
+
 ## Overview
 This project was developed as part of the Responsible Data Engineering Project at the DEEM Lab, TU Berlin.
 

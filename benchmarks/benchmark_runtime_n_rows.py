@@ -1,73 +1,47 @@
-import numpy as np
-import pandas as pd
+from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from benchmarks.benchmark_utils import make_dataset
+from skrub import TableVectorizer
+from time import perf_counter
+from skrub import ApplyToCols
+from pathlib import Path
 import skrub
+import csv
 
 
 # python -m monkey_patching_v02.data_provenance.benchmarking_time_mpv02
-from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance
-
-
-def make_dataset(n_rows: int, seed: int = 0):
-    rng = np.random.default_rng(seed)
-
-    # Main table
-    df_main = pd.DataFrame({
-        "user_id": rng.integers(0, n_rows // 10, size=n_rows),
-        "category": rng.choice(["A", "B", "C", "D"], size=n_rows),
-        "value": rng.normal(0, 1, size=n_rows),
-        "text": rng.choice(
-            [f"token_{i}" for i in range(100)],  # controls sparsity
-            size=n_rows
-        ),
-    })
-
-    # Lookup table for merge
-    df_lookup = pd.DataFrame({
-        "user_id": np.arange(n_rows // 10),
-        "country": rng.choice(["FR", "DE", "US", "UK"], size=n_rows // 10),
-        "segment": rng.choice(["S1", "S2", "S3"], size=n_rows // 10),
-    })
-
-    return df_main, df_lookup
-
-import skrub
-import logging
-
-from time import perf_counter
-from pathlib import Path
-import csv
-import logging
-from skrub import TableVectorizer
-
 # -------------------------
 # Pipeline
 # -------------------------
 def run_pipeline(df_main, df_lookup, verbose=False):
-    # --- Initialization ---
+    # --- Initialization time for one dataframe ---
     t0 = perf_counter()
-    df_main, df_lookup = skrub.var("df_main", df_main), skrub.var("df_lookup",df_lookup)
+    var_main = skrub.var("df_main", df_main)
     initialization_time = perf_counter() - t0
+
+    var_lookup = skrub.var("df_lookup",df_lookup)
+
     if verbose:
         print("df_main")
-        print(df_main)
-        print("df_lookup")
-        print(df_lookup)
+        print(var_main)
+        print("var_lookup")
+        print(var_lookup)
 
     
     # --- Merge ---
     t0 = perf_counter()
-    df_merged = df_main.merge(df_lookup, on="user_id", how="left")
+    var_merged = var_main.merge(var_lookup, on="user_id", how="left")
     merge_time = perf_counter() - t0
 
     if verbose:
-        print("df_merged")
-        print(df_merged)
+        print("var_merged")
+        print(var_merged)
 
 
     # --- Aggregation ---
     t0 = perf_counter()
-    df_agg = (
-        df_merged
+    var_agg = (
+        var_merged
         .groupby(["category"], as_index=False)
         .agg({
             "text": "count",
@@ -76,17 +50,41 @@ def run_pipeline(df_main, df_lookup, verbose=False):
     aggregation_time = perf_counter() - t0
 
     if verbose:
-        print("df_agg")
-        print(df_agg)
+        print("var_agg")
+        print(var_agg)
 
+    # var_agg does not contain many columns
+    # Applying three different scikit-learn estimators to var_merged
     # --- TableVectorizer ---
     t0 = perf_counter()
     tv = TableVectorizer()
-    X = df_merged.skb.apply(tv)
+    X = var_merged.skb.apply(tv)
     tablevectorizer_time = perf_counter() - t0
     if verbose:
         print("df_tableVectorized")
         print(X)
+
+
+    ohe = ApplyToCols(OneHotEncoder(sparse_output=False), cols= ["category"])
+    # --- OneHotEncoder ---
+    t0 = perf_counter()
+    X = var_merged.skb.apply(ohe)
+    oneHotEncoder_time = perf_counter() - t0
+    if verbose:
+        print("df_OneHotEncoded")
+        print(X)
+
+    standard_scaler = ApplyToCols(StandardScaler(), cols=["value"])
+    # --- StandardScaler ---
+    t0 = perf_counter()
+    X = var_merged.skb.apply(standard_scaler)
+    standardScaler_time = perf_counter() - t0
+    if verbose:
+        print("df_StandardScaled")
+        print(X)
+
+    
+    
 
     total_time = initialization_time + merge_time + aggregation_time + tablevectorizer_time
     # total_time = merge_time
@@ -96,8 +94,8 @@ def run_pipeline(df_main, df_lookup, verbose=False):
         "aggregation_time": aggregation_time,
         "tablevectorizer_time": tablevectorizer_time,
         "total_time": total_time,
-        "rows_after_merge": len(df_merged.skb.eval()),
-        "rows_after_aggregation": len(df_agg.skb.eval()),
+        "oneHotEncoder_time":oneHotEncoder_time,
+        "standardScaler_time":standardScaler_time,
         "n_features": X.skb.eval().shape[1],
     }
 
@@ -110,7 +108,7 @@ def benchmark(enable_provenance=False,  n_runs=5, dataset_sizes=None, verbose=Fa
         dataset_sizes = [1000, 10_000, 100_000, 1_000_000, 10_000_000]
         # dataset_sizes = [1_000_000_000]
 
-    CSV_PATH = Path(f"{output_file_name}")
+    CSV_PATH = Path(f"benchmark_logs/{output_file_name}")
 
     FIELDNAMES = [
         "initialization_time",
@@ -118,16 +116,14 @@ def benchmark(enable_provenance=False,  n_runs=5, dataset_sizes=None, verbose=Fa
         "merge_time",
         "aggregation_time",
         "tablevectorizer_time",
+        "oneHotEncoder_time",
+        "standardScaler_time",
         "total_time",
-        "rows_after_merge",
-        "rows_after_aggregation",
         "n_features",
     ]
 
     if enable_provenance:
         enable_why_data_provenance(agg_func_over_prov_cols=agg_func_for_prov_cols)
-
-
 
     write_header = not CSV_PATH.exists()
 
@@ -144,7 +140,7 @@ def benchmark(enable_provenance=False,  n_runs=5, dataset_sizes=None, verbose=Fa
             # accumulator
             sums = {k: 0.0 for k in FIELDNAMES if k != "n_rows_input"}
 
-            for run in range(n_runs):
+            for _ in range(n_runs):
                 timings = run_pipeline(df_main, df_lookup, verbose)
 
                 for k in sums:
@@ -164,8 +160,8 @@ def benchmark(enable_provenance=False,  n_runs=5, dataset_sizes=None, verbose=Fa
 if __name__ == "__main__":
     # benchmark(provenance_enable_why_data=False, n_runs=50)
     # benchmark(provenance_enable_why_data=True, n_runs=50)
-    benchmark(enable_provenance=False, n_runs=5, output_file_name="speed_benchmark_no_provenance.csv")
-    benchmark(enable_provenance=True, n_runs=5, agg_func_for_prov_cols=list, output_file_name="speed_benchmark_provenance_list.csv")
-    benchmark(enable_provenance=True, n_runs=5, agg_func_for_prov_cols=frozenset, output_file_name="speed_benchmark_provenance_frozenset.csv")
-    benchmark(enable_provenance=True, n_runs=5, agg_func_for_prov_cols="list_reduce", output_file_name="speed_benchmark_provenance_list_reduce.csv")
-    benchmark(enable_provenance=True, n_runs=5, agg_func_for_prov_cols="set_reduce", output_file_name="speed_benchmark_provenance_set_reduce.csv")
+    benchmark(enable_provenance=False, n_runs=5, output_file_name="benchmark_runtime_n_rows_no_provenance.csv")
+    benchmark(enable_provenance=True, n_runs=5, agg_func_for_prov_cols=list, output_file_name="benchmark_runtime_n_rows_provenance_list.csv")
+    benchmark(enable_provenance=True, n_runs=5, agg_func_for_prov_cols=frozenset, output_file_name="benchmark_runtime_n_rows_provenance_frozenset.csv")
+    benchmark(enable_provenance=True, n_runs=5, agg_func_for_prov_cols="list_reduce", output_file_name="benchmark_runtime_n_rows_provenance_list_reduce.csv")
+    benchmark(enable_provenance=True, n_runs=5, agg_func_for_prov_cols="set_reduce", output_file_name="benchmark_runtime_n_rows_provenance_set_reduce.csv")

@@ -230,6 +230,29 @@ The target variable y is set as the total sum of payments per customer (sum_paym
 
 Each encoded version of X is then used to train a HistGradientBoostingClassifier to predict is_late. The pipeline evaluates performance via cross-validation (cv=2) and stores results for each encoder type.
 
+**Hands-On with Column Selection and Transformers**
+This pipeline demonstrates how explicit column selection and heterogeneous feature transformations can be integrated into a skrub DataOps workflow while preserving provenance information. It focuses on a late-delivery prediction task in an e-commerce setting, using the Olist datasets.
+The pipeline begins by loading and joining multiple raw tables, including orders, order items, payments, products, customers, and product category translations. These tables are merged at the order level to create a unified dataset containing transactional, product, payment, and customer-location information. Date columns are parsed into datetime objects, and a binary target variable is_late is created by comparing the actual delivery date to the estimated delivery date.
+A key aspect of this pipeline is its hands-on approach to column selection and transformation. Instead of relying on automatic vectorization, features are explicitly grouped into datetime, numeric, and categorical subsets. Datetime features (such as the purchase timestamp) are encoded using a dedicated datetime transformer, numeric features are imputed and scaled, and categorical features are imputed and one-hot encoded. All projections are performed using df.skb.select(...) to ensure that provenance columns are correctly propagated when provenance tracking is enabled.
+The transformed feature matrix is then passed to a HistGradientBoostingClassifier within the skrub framework. The pipeline uses skrub’s apply, mark_as_X, mark_as_y, and train_test_split mechanisms to build, train, and evaluate the model in a reproducible manner. This pipeline illustrates how fine-grained control over column selection and preprocessing can coexist with skrub’s DataOps abstraction, while remaining compatible with row-level provenance tracking.
+
+**Aggregated Payments Join**
+This pipeline focuses on aggregation followed by a join, a common pattern in data engineering workflows that is particularly sensitive to provenance tracking. It addresses the task of predicting whether an order will be delivered late by enriching the orders table with aggregated payment information.
+The pipeline starts by loading the orders and payments datasets and wrapping them with skrub.var() to enable provenance tracking. Payment-level data is first aggregated at the order level using a group-by operation, computing features such as the total payment value, the number of payment records, the maximum number of installments, and the diversity of payment types. This aggregated table represents a many-to-one transformation, where each aggregated row depends on multiple original payment rows.
+The aggregated payment features are then joined back to the orders table using a left join on order_id. Date columns are converted to datetime objects, and a binary target variable is_late is created by comparing the actual delivery date with the estimated delivery date. The resulting dataset combines original order information with derived payment-level features.
+For modeling, numeric features are selected and scaled, while categorical features are encoded using simple encoders. A HistGradientBoostingClassifier is applied within the skrub framework, using skrub’s apply, mark_as_X, mark_as_y, and train_test_split utilities. This pipeline highlights how provenance information propagates through aggregation and join operations, while remaining compatible with standard machine learning workflows and maintaining reasonable performance overhead.
+
+**Leakage-Safe Target Encoding (Train-Only Aggregation)**
+This pipeline illustrates a common source of data leakage and demonstrates a safe way to build aggregated features in a skrub DataOps workflow. The task is to predict whether an order will be delivered late (is_late) using order-level and product-level information from the Olist datasets.
+The pipeline loads and joins orders, order items, products, and product category translations to build an order-level table. A binary target variable is_late is created by comparing the delivered date to the estimated delivery date. The key idea is to build a “risk score” feature per product category, computed as the average late-delivery rate for that category.
+To avoid leakage, this aggregation is computed only on the training split. The category-level late rate is derived from the training data and then joined back into both the train and test sets. Categories that appear only in the test set are handled by filling missing values with a default (e.g., the global late rate from train). The resulting dataset contains a leakage-safe aggregated feature that captures historical delay patterns without using information from the test labels.
+For modeling, the pipeline combines the aggregated category risk score with simple numeric features (such as price and freight value) and uses a HistGradientBoostingClassifier within the skrub framework. It relies on skrub’s DataOps primitives (apply, mark_as_X, mark_as_y, train_test_split) and remains compatible with row-level provenance tracking. This pipeline is useful both as a realistic workflow and as a reference example for designing leakage-safe features in provenance-aware pipelines.
+
+**Imbalanced Learning with RandomUnderSampler**
+This pipeline demonstrates provenance tracking in the presence of row-sampling operations, which are particularly challenging because they change the number of rows and may duplicate or remove records. The task is a binary classification problem on the Olist datasets, where the goal is to predict whether an order will be delivered late (is_late), a label that is typically imbalanced.
+The pipeline loads and joins the core Olist tables required to build an order-level dataset, including orders, order items, payments, and customer location information. Datetime columns are parsed and a binary target variable is_late is computed by comparing the delivered date with the estimated delivery date. A small set of numeric and categorical features is selected for modeling.
+To address the class imbalance, the pipeline applies RandomUnderSampler from the imbalanced-learn library to downsample the majority class in the training set. Unlike standard scikit-learn transformers that preserve the number of rows, this operation changes the dataset cardinality and therefore requires careful provenance propagation. The pipeline then preprocesses numeric features with scaling and categorical features with one-hot encoding, and trains a HistGradientBoostingClassifier. Evaluation is performed on a held-out test set using skrub’s train/test utilities.
+This pipeline is a useful stress test for provenance tracking because it highlights how provenance identifiers should behave when rows are removed or selected by a sampling strategy, while remaining compatible with a standard end-to-end machine learning workflow.
 ---
 
 ## Testing
@@ -258,6 +281,7 @@ Compares the two DataFrames with .equals().
 
 Result: -> Prints ✅ if the outputs are identical, ❌ if they differ.
 This test might not be functional if the sampling is still turned on when reading from the file. When turned off, this test works
+
 
 ---
 

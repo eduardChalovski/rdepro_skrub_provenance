@@ -23,9 +23,6 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from imblearn.under_sampling import RandomUnderSampler
 
 
-# -------------------------------------------------
-# CLI arguments
-# -------------------------------------------------
 parser = argparse.ArgumentParser()
 parser.add_argument("--track-provenance", action="store_true")
 args = parser.parse_args()
@@ -37,10 +34,6 @@ if args.track_provenance:
 else:
     print("Provenance is disabled")
 
-
-# -------------------------------------------------
-# 1) LOAD DATA
-# -------------------------------------------------
 orders = skrub.var("orders", pd.read_csv("./src/datasets/olist_orders_dataset.csv"))
 order_items = skrub.var("order_items", pd.read_csv("./src/datasets/olist_order_items_dataset.csv"))
 payments = skrub.var("payments", pd.read_csv("./src/datasets/olist_order_payments_dataset.csv"))
@@ -48,10 +41,6 @@ customers = skrub.var("customers", pd.read_csv("./src/datasets/olist_customers_d
 
 print("Datasets loaded")
 
-
-# -------------------------------------------------
-# 2) JOIN + TARGET (DataOps-friendly)
-# -------------------------------------------------
 df = (
     orders
     .merge(order_items, on="order_id", how="left")
@@ -92,19 +81,15 @@ y = df["is_late"].skb.mark_as_y()
 
 print("Target distribution (preview):")
 try:
-    # preview() forces evaluation and can be slow, but it gives a real distribution
+    # preview() forces evaluation
     print(df.skb.preview()["is_late"].value_counts(dropna=False))
 except Exception as e:
     print("Could not compute preview distribution:", repr(e))
 
-
-# -------------------------------------------------
-# 3) PREPROCESSING
-# -------------------------------------------------
 numeric_features = ["payment_value", "payment_installments", "price", "freight_value"]
 categorical_features = ["payment_type", "customer_state"]
 
-# Dense output for pandas
+
 ohe = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
 
 preprocessor = ColumnTransformer(
@@ -124,9 +109,6 @@ preprocessor = ColumnTransformer(
 X = Xraw.skb.apply(preprocessor).skb.mark_as_X()
 
 
-# -------------------------------------------------
-# 4) SPLIT + UNDERSAMPLING + MODEL
-# -------------------------------------------------
 dummy_model = HistGradientBoostingClassifier(random_state=0)
 predictor = X.skb.apply(dummy_model, y=y)
 split = predictor.skb.train_test_split(random_state=0)

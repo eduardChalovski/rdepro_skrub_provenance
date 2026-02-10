@@ -22,9 +22,6 @@ from sklearn.impute import SimpleImputer
 from sklearn.ensemble import HistGradientBoostingClassifier
 
 
-# -------------------------------------------------
-# CLI arguments
-# -------------------------------------------------
 parser = argparse.ArgumentParser()
 parser.add_argument("--track-provenance", action="store_true")
 args = parser.parse_args()
@@ -36,10 +33,6 @@ if args.track_provenance:
 else:
     print("Provenance is disabled")
 
-
-# -------------------------------------------------
-# 1) LOAD DATA
-# -------------------------------------------------
 orders = skrub.var("orders", pd.read_csv("./src/datasets/olist_orders_dataset.csv"))
 order_items = skrub.var("order_items", pd.read_csv("./src/datasets/olist_order_items_dataset.csv"))
 products = skrub.var("products", pd.read_csv("./src/datasets/olist_products_dataset.csv"))
@@ -47,10 +40,6 @@ cat_tr = skrub.var("cat_tr", pd.read_csv("./src/datasets/product_category_name_t
 
 print("Datasets loaded")
 
-
-# -------------------------------------------------
-# 2) JOIN + TARGET (DataOps-friendly) ثم materialize once
-# -------------------------------------------------
 products_en = (
     products
     .merge(cat_tr, on="product_category_name", how="left")
@@ -84,10 +73,6 @@ print("Building a concrete pandas dataframe (preview)...")
 df_pd = df.skb.preview()
 print("Preview built:", df_pd.shape)
 
-
-# -------------------------------------------------
-# 3) SPLIT FIRST (no leakage)
-# -------------------------------------------------
 X_pd = df_pd[["product_category_en", "price", "freight_value"]].copy()
 y_pd = df_pd["is_late"].astype(int).copy()
 
@@ -97,10 +82,6 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 print("Split done:", X_train.shape, X_test.shape)
 
-
-# -------------------------------------------------
-# 4) TRAIN-ONLY AGGREGATION (target encoding)
-# -------------------------------------------------
 train_with_y = X_train.copy()
 train_with_y["is_late"] = y_train.values
 
@@ -120,9 +101,6 @@ X_train2["cat_late_rate"] = X_train2["cat_late_rate"].fillna(global_rate)
 X_test2["cat_late_rate"] = X_test2["cat_late_rate"].fillna(global_rate)
 
 
-# -------------------------------------------------
-# 5) PREPROCESS + MODEL (numeric only after encoding)
-# -------------------------------------------------
 feature_cols = ["price", "freight_value", "cat_late_rate"]
 
 preprocessor = ColumnTransformer(

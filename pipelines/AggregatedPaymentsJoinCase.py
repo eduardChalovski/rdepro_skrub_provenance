@@ -21,9 +21,6 @@ from sklearn.impute import SimpleImputer
 from sklearn.ensemble import HistGradientBoostingClassifier
 
 
-# -------------------------------------------------
-# CLI arguments
-# -------------------------------------------------
 parser = argparse.ArgumentParser()
 parser.add_argument("--track-provenance", action="store_true")
 args = parser.parse_args()
@@ -36,18 +33,12 @@ else:
     print("Provenance is disabled")
 
 
-# -------------------------------------------------
-# 1) LOAD DATA
-# -------------------------------------------------
 orders = skrub.var("orders", pd.read_csv("./src/datasets/olist_orders_dataset.csv"))
 payments = skrub.var("payments", pd.read_csv("./src/datasets/olist_order_payments_dataset.csv"))
 
 print("Datasets loaded")
 
 
-# -------------------------------------------------
-# 2) AGGREGATE PAYMENTS AT ORDER LEVEL
-# -------------------------------------------------
 payments_agg = (
     payments
     .groupby("order_id")
@@ -60,7 +51,7 @@ payments_agg = (
     .reset_index()
 )
 
-# Fill missing values (DataOps-friendly)
+# Fill missing values 
 payments_agg = payments_agg.assign(
     total_payment=lambda d: d["total_payment"].fillna(0),
     n_payments=lambda d: d["n_payments"].fillna(0),
@@ -69,18 +60,15 @@ payments_agg = payments_agg.assign(
 )
 
 
-# -------------------------------------------------
-# 3) JOIN AGGREGATED PAYMENTS WITH ORDERS
-# -------------------------------------------------
 orders_full = orders.merge(payments_agg, on="order_id", how="left")
 
-# Parse dates (DataOps-friendly: use lambdas)
+# Parse dates 
 orders_full = orders_full.assign(
     order_delivered_customer_date=lambda d: pd.to_datetime(d["order_delivered_customer_date"], errors="coerce"),
     order_estimated_delivery_date=lambda d: pd.to_datetime(d["order_estimated_delivery_date"], errors="coerce"),
 )
 
-# Target: late delivery (must also be DataOps-friendly: use lambda)
+# Target: late delivery 
 orders_full = orders_full.assign(
     is_late=lambda d: (d["order_delivered_customer_date"] > d["order_estimated_delivery_date"]).fillna(False).astype(int)
 )
@@ -88,9 +76,6 @@ orders_full = orders_full.assign(
 print("Join and target creation done")
 
 
-# -------------------------------------------------
-# 4) FEATURES + PREPROCESSING
-# -------------------------------------------------
 numeric_features = ["total_payment", "n_payments", "max_installments", "payment_type_count"]
 categorical_features = ["order_status"]
 
@@ -117,9 +102,6 @@ preprocessor = ColumnTransformer(
 X = Xraw.skb.apply(preprocessor).skb.mark_as_X()
 
 
-# -------------------------------------------------
-# 5) MODEL & EVALUATION
-# -------------------------------------------------
 model = HistGradientBoostingClassifier(random_state=0)
 predictor = X.skb.apply(model, y=y)
 

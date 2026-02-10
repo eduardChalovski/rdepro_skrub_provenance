@@ -261,6 +261,43 @@ We implemented a comprehensive test suite to ensure correctness and stability:
 - Integration tests for full pipelines
 - Edge case testing for joins, aggregations, and transformations
 
+**Unit Tests**
+
+We implemented a focused unit-test suite to validate provenance propagation at the **DataOp boundary**, i.e. operation-by-operation, with small deterministic inputs.  
+All tests are located in `tests/` and can be run with:
+pytest -q
+
+Below is an overview of the main tests and what they verify (one sentence each):
+- test_provenance_activation.py
+Checks that provenance tracking can be enabled/disabled cleanly and that provenance columns appear only when tracking is active.
+- test_decode_prov_column.py
+Validates that encoded provenance identifiers are correctly decoded into a stable, human-readable token format (e.g., table:row_id).
+- test_groupby_agg_provenance.py
+Ensures that groupby(...).agg(...) propagates provenance correctly for standard aggregations, including the union of contributing rows per group.
+- test_groupby_named_agg_provenance.py
+Checks provenance correctness for pandas “named aggregation” syntax and verifies that renaming outputs does not break provenance propagation.
+- test_groupby_agg_list_provenance.py
+Validates the special provenance aggregation strategy where provenance columns are aggregated via list and then normalized back to a single provenance representation.
+- test_groupby_agg_string_provenance.py
+Confirms robustness when aggregation specs are provided as strings (pandas-style), ensuring the correct provenance handler is triggered.
+- test_merge_inner_provenance.py
+Checks that inner joins keep only matching rows and that output provenance correctly combines contributing rows from both sides of the join.
+- test_merge_left_provenance_nulls.py
+Validates left joins with missing matches: unmatched rows must keep left-side provenance and handle right-side provenance as null/empty appropriately.
+- test_merge_right_provenance_nulls.py
+Same as above for right joins: unmatched rows must keep right-side provenance and handle left-side provenance as null/empty appropriately.
+- test_merge_chain_provenance.py
+Ensures provenance remains consistent across multiple consecutive joins, i.e., provenance composition is stable over a join chain.
+- test_isin_filter_provenance.py
+Checks selection/filter operations (e.g., isin) preserve provenance for retained rows and do not introduce spurious provenance.
+- test_estimator_boundary_no_prov.py
+Ensures that when provenance is disabled (or at estimator boundaries where provenance must be dropped), ML estimators receive clean inputs without provenance columns.
+- test_predictor_boundary_no_prov.py
+Validates the prediction boundary behavior: provenance should not leak into the predictor input, while provenance remains inspectable before/after the boundary as intended.
+- test_DeterminismCheck.py
+Runs an end-to-end pipeline twice and asserts identical outputs (after NaN normalization), detecting any non-determinism introduced by provenance handling or pipeline steps.
+
+
 **test_DeterminismCheck** - This script is designed to check the determinism of a skrub-based pipeline by running it twice and comparing the outputs. Here's a breakdown of what it does:
 
 Setup:

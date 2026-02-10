@@ -1,17 +1,25 @@
 import sys
 from pathlib import Path
-
+import subprocess
+def run_uv_sync():
+    """Install dependencies via uv before running the rest of the pipeline"""
+    try:
+        # Use subprocess to run shell commands
+        subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
+        print("✅ uv dependencies installed successfully")
+    except subprocess.CalledProcessError as e:
+        print("❌ uv install failed")
+        print(e)
+        sys.exit(1)
+run_uv_sync()
+print("Done!")
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-
 import pandas as pd
-import numpy as np
-from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.ensemble import HistGradientBoostingClassifier
-from sklearn.model_selection import cross_validate
 import skrub
-from skrub import Joiner, SelectCols
+from skrub import Joiner
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -47,21 +55,17 @@ payments_agg = payments.groupby('order_id').agg(
     total_payment=('payment_value', 'sum')
 ).reset_index()
 
-
 orders_full = orders.merge(order_items_agg, on='order_id', how='left')
 orders_full = orders_full.merge(payments_agg, on='order_id', how='left')
 orders_full = orders_full.merge(reviews.skb.select(['order_id','review_score']), on='order_id', how='left')
 
-
 for col in ['total_items', 'total_price', 'total_freight', 'total_payment']:
     orders_full = orders_full.assign(col = orders_full[col].fillna(0))
-
 
 orders_full = orders_full.assign(bad_review = (orders_full['review_score'] <= 2).astype(int))
 y = orders_full['bad_review'].skb.mark_as_y()
 # print("y")
 # print(y.skb.eval())
-
 
 first_product_per_order = order_items.skb.select(['order_id','product_id']).drop_duplicates('order_id')
 
@@ -80,7 +84,6 @@ orders_full = orders_full.merge(
     on='order_id',
     how='left'
 )
-
 
 geo_features = customers.skb.select(['customer_id','customer_zip_code_prefix']).merge(
     geolocation.drop_duplicates('geolocation_zip_code_prefix'),
@@ -143,9 +146,7 @@ preprocessor = ColumnTransformer(
 
 # HistGradientBoostingClassifier.fit = debug_fit
 
-
 clf = HistGradientBoostingClassifier(random_state=42)
-
 
 Xpre = (orders_full.skb.select(numeric_features + categorical_features))
 X = Xpre.skb.apply(preprocessor).skb.mark_as_X()
@@ -169,8 +170,6 @@ learner.score(split["test"])
 #orders_full['bad_review_pred_proba'] = 
 
 # Show top 10 most likely bad reviews
-
-
 #pred = learner.predict(split["test"])
 # learner.predict
 values = bad_review_pred_proba = learner.report(environment=split["train"], mode="predict_proba", open=False)["result"]

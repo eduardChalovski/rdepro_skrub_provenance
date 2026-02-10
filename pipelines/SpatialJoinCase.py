@@ -1,20 +1,27 @@
 import sys
+import subprocess
+def run_uv_sync():
+    """Install dependencies via uv before running the rest of the pipeline"""
+    try:
+        # Use subprocess to run shell commands
+        subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
+        print("✅ uv dependencies installed successfully")
+    except subprocess.CalledProcessError as e:
+        print("❌ uv install failed")
+        print(e)
+        sys.exit(1)
+
+# Run this first
+run_uv_sync()
+print("Done!")
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-
-from skrub import TableVectorizer, GapEncoder, StringEncoder, TextEncoder, MinHashEncoder
-from sklearn.pipeline import make_pipeline
+from skrub import TableVectorizer
 from sklearn.ensemble import HistGradientBoostingClassifier
-from sklearn.model_selection import cross_validate
 from skrub import Joiner
 import skrub
 import pandas as pd
-import numpy as np
-from sklearn.pipeline import Pipeline
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import cross_val_score
 import argparse
-
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--track-provenance",
@@ -28,7 +35,6 @@ if args.track_provenance:
     enable_why_data_provenance()
 else:
     print("Provenance is disabled")
-
 print("Libraries imported")
 
 
@@ -42,7 +48,6 @@ geolocation = skrub.var("geolocation", pd.read_csv(f'./src/datasets/olist_geoloc
 products = skrub.var("products", pd.read_csv(f'./src/datasets/olist_products_dataset.csv').sample(frac = 0.01))
 
 orders_feat = orders
-
 
 geo_centroids = (
     geolocation
@@ -96,8 +101,6 @@ join_geolocation = Joiner(
 )
 
 vectorizer = TableVectorizer()
-
-
 
 orders = orders.copy()
 

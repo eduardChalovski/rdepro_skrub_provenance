@@ -1,8 +1,20 @@
 import sys
 from pathlib import Path
-
+import subprocess
+def run_uv_sync():
+    """Install dependencies via uv before running the rest of the pipeline"""
+    try:
+        # Use subprocess to run shell commands
+        subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
+        print("✅ uv dependencies installed successfully")
+    except subprocess.CalledProcessError as e:
+        print("❌ uv install failed")
+        print(e)
+        sys.exit(1)
+run_uv_sync()
+print("Done!")
+print("Done!")
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-
 
 # End-to-End Data Analysis
 # =====================================================
@@ -14,16 +26,11 @@ customer satisfaction, and key operational drivers.
 """
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import seaborn as sns
-import os
 import skrub
 from skrub import ToDatetime
-from skrub import TableReport
 sns.set(style="whitegrid")
-
 import argparse
-
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--track-provenance",
@@ -31,15 +38,12 @@ parser.add_argument(
     help="Enable provenance tracking"
 )
 args = parser.parse_args()
-
 if args.track_provenance:
     print("Provenance is enabled")
     from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
     enable_why_data_provenance()
 else:
     print("Provenance is disabled")
-
-
 
 customers = skrub.var("customers", pd.read_csv(f'./src/datasets/olist_customers_dataset.csv'))
 orders =  pd.read_csv(f'./src/datasets/olist_orders_dataset.csv')

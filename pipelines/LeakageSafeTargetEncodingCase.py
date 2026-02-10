@@ -1,11 +1,17 @@
-# Leakage-Safe Target Encoding Pipeline (Skrub + Provenance)
-# Goal: predict late delivery, with a train-only aggregated feature (no data leakage).
-#
-# Run:
-#   python -m pipelines.LeakageSafeTargetEncodingCase
-#   python -m pipelines.LeakageSafeTargetEncodingCase --track-provenance
-
 import sys
+import subprocess
+def run_uv_sync():
+    """Install dependencies via uv before running the rest of the pipeline"""
+    try:
+        # Use subprocess to run shell commands
+        subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
+        print("✅ uv dependencies installed successfully")
+    except subprocess.CalledProcessError as e:
+        print("❌ uv install failed")
+        print(e)
+        sys.exit(1)
+run_uv_sync()
+print("Done!")
 from pathlib import Path
 import argparse
 
@@ -20,12 +26,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.ensemble import HistGradientBoostingClassifier
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--track-provenance", action="store_true")
 args = parser.parse_args()
-
 if args.track_provenance:
     print("Provenance is enabled")
     from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance
@@ -99,7 +102,6 @@ X_test2 = X_test.merge(cat_stats, on="product_category_en", how="left")
 
 X_train2["cat_late_rate"] = X_train2["cat_late_rate"].fillna(global_rate)
 X_test2["cat_late_rate"] = X_test2["cat_late_rate"].fillna(global_rate)
-
 
 feature_cols = ["price", "freight_value", "cat_late_rate"]
 

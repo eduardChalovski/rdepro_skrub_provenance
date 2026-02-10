@@ -1,34 +1,22 @@
-# Hands-On with Column Selection and Transformers (Olist + Skrub DataOps + Provenance)
-# Goal: predict whether an order will be late (delivered after estimated date).
-#
-# Inspired by skrub examples about applying different transformers to selected columns.
-#
-# Run:
-#   python -m pipelines.HandsOnColumnSelectionTransformersCase --track-provenance
-
 import sys
 from pathlib import Path
+import subprocess
+print("Installing dependencies from uv.lock using PDM...")
+subprocess.check_call([sys.executable, "-m", "pdm", "install"])
+print("Done!")
 import argparse
-
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-
 import pandas as pd
-import numpy as np
-
 import skrub
 from skrub import DatetimeEncoder, ApplyToCols
-
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.ensemble import HistGradientBoostingClassifier
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--track-provenance", action="store_true", help="Enable provenance tracking")
 args = parser.parse_args()
-
 if args.track_provenance:
     print("Provenance is enabled")
     from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import (
@@ -50,7 +38,6 @@ products = skrub.var("products", pd.read_csv("./src/datasets/olist_products_data
 cat_tr = skrub.var("cat_tr", pd.read_csv("./src/datasets/product_category_name_translation.csv"))
 
 print("Files read, starting preprocessing")
-
 
 # Join products + translated category
 products_en = (
@@ -74,7 +61,6 @@ orders_full = (
         how="left",
     )
 )
-
 
 orders_full = orders_full.assign(
     order_purchase_timestamp=lambda d: pd.to_datetime(d["order_purchase_timestamp"], errors="coerce"),
@@ -116,7 +102,6 @@ feature_cols = [
 Xraw = orders_full.skb.select(feature_cols)
 y = orders_full["is_late"].skb.mark_as_y()
 
-
 datetime_cols = ["order_purchase_timestamp"]
 numeric_cols = ["n_installments", "payment_value", "price", "freight_value", "product_weight_g", "product_photos_qty"]
 categorical_cols = ["payment_type", "product_category_en", "customer_state", "customer_city"]
@@ -143,7 +128,6 @@ preprocessor = ColumnTransformer(
 # Apply in two stages
 X_dt = Xraw.skb.apply(dt_step)
 X = X_dt.skb.apply(preprocessor).skb.mark_as_X()
-
 
 model = HistGradientBoostingClassifier(random_state=0)
 predictor = X.skb.apply(model, y=y)

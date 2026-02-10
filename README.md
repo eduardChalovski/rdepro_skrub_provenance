@@ -296,6 +296,25 @@ Metrics include:
 
 The results help quantify the trade-offs between transparency and performance.
 
+
+Benchmark Memory overhead for Aggregation
+
+![Benchmark_memory_agg](benchmark_logs/plots/benchmark_memory_agg.png)
+
+
+Benchmark runtime overheadconsecutive execution of merge + agg
+
+![benchmark_runtime_n_operators_aggregation](benchmark_logs/plots/benchmark_runtime_n_operators_aggregation.png)
+
+
+Benchmark runtime overhead for different estimators
+
+![benchmark_runtime_n_rows_different_estimators](benchmark_logs/plots/benchmark_runtime_n_rows_different_estimators.png)
+
+Benchmark runtime overhead for different reduce funtions in aggregation
+
+![benchmark_runtime_n_rows_different_reduce_functions](benchmark_logs/plots/benchmark_runtime_n_rows_different_reduce_functions.png)
+
 ---
 
 ## Experiments

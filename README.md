@@ -674,16 +674,16 @@ We profiled the execution of a complex pipeline using `cProfile` and
 visualized the results with `snakeviz`. The analysis revealed two
 primary sources of overhead when provenance tracking is enabled:
 
--   `dataop.py (eval)` → \~14 seconds\
--   `_evaluation.py (handle_data_op)` → \~44 seconds
+-   `_data_ops.py (eval)` → \~17 seconds  (difference between operations marked with a 2)
+-   `_evaluation.py (handle_data_op)` → \~52 seconds (difference between operations marked with a 3)
 
 For comparison, when provenance tracking is disabled, `handle_data_op`
-executes in **less than 1 second** for the same pipeline. This indicates
+executes in **less than 3 second** for the same pipeline. This indicates
 that provenance tracking is responsible for the majority of the runtime
 overhead.
 
-Overall, in a full pipeline execution time of approximately 137 seconds,
-about 14 seconds (\~10%) can be attributed to additional
+Overall, in a full pipeline execution time of approximately 163 seconds,
+about 17 seconds (\~10%) can be attributed to additional
 provenance-related logic outside aggregation, while aggregation itself
 contributes the dominant overhead.
 

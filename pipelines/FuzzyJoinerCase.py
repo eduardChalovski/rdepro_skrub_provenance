@@ -1,3 +1,6 @@
+import time
+
+start_time = time.time()
 import sys
 from pathlib import Path
 import subprocess
@@ -52,7 +55,10 @@ augmented_df = fuzzy_join(
 )
 
 print(augmented_df)
+end_time = time.time() 
 
+elapsed = end_time - start_time
+print(f"⏱ Elapsed time: {elapsed:.2f} seconds")
 
 
 

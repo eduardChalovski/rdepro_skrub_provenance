@@ -1,3 +1,6 @@
+import time
+
+start_time = time.time()
 import sys
 from pathlib import Path
 import subprocess
@@ -147,3 +150,7 @@ if args.track_provenance:
         print(prov.head())
     except Exception as e:
         print("Could not evaluate provenance here:", repr(e))
+        end_time = time.time() 
+
+elapsed = end_time - start_time
+print(f"⏱ Elapsed time: {elapsed:.2f} seconds")

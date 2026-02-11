@@ -1,3 +1,6 @@
+import time
+
+start_time = time.time()
 import sys
 from pathlib import Path
 import subprocess
@@ -175,3 +178,7 @@ learner.score(split["test"])
 values = bad_review_pred_proba = learner.report(environment=split["train"], mode="predict_proba", open=False)["result"]
 print(values)
 #PIPELINE RESULT CAN BE SORTED AND ADJUSTED TO DERRIVE THE LOGICAL CONCLUSION BUT FOR THE PURPOSE OF THE PROJECT IT WORKS
+end_time = time.time() 
+
+elapsed = end_time - start_time
+print(f"⏱ Elapsed time: {elapsed:.2f} seconds")

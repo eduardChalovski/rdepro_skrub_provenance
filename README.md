@@ -205,6 +205,12 @@ Each pipeline demonstrates:
 - Compatibility with existing skrub APIs
 - Reasonable performance overhead
 
+The calculations of running time are after deleting the pycache after every run so they can be as objective as possible. The runs
+were done on:
+- Processor	Intel(R) Core(TM) Ultra 7 155H (1.40 GHz)
+- Installed RAM	32.0 GB (31.5 GB usable)
+- System type	64-bit operating system, x64-based processor
+
 
 **Basic Data Analaysis** - This pipeline performs an end-to-end data analysis, focusing on understanding delivery performance and customer satisfaction. It starts by loading multiple datasets—customers, orders, order items, payments, and reviews. The datasets are merged into a single df DataFrame, with date columns converted to datetime objects. The pipeline filters only delivered orders and computes new features, such as delivery_delay (difference between actual and estimated delivery dates), order_value (based on product price), and a binary is_delayed indicator. It cleans the data by removing NaNs and extreme outliers, then visualizes the data using skrub’s graphing tools. Finally, it prepares a subset of relevant features for predictive modeling, marking them appropriately as predictors (X) and target (y) for training a machine learning model, such as logistic regression, to predict whether an order will be delayed.
 This combines data preprocessing, feature engineering, visualization, and machine learning preparation into a single reproducible pipeline.
@@ -648,7 +654,7 @@ provenance structure.
 ## Authors
 - Teodor Aleksiev 0530377
 - Jeanne
-- Yigit
+- Yigit Mesci 0505962
 - Eduard Chalovski 0412770
 
 ---

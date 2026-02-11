@@ -1,3 +1,6 @@
+import time
+
+start_time = time.time()
 import sys
 import subprocess
 def run_uv_sync():
@@ -124,3 +127,7 @@ scores = pipeline.skb.cross_validate(cv = 5)
 
 print("CV scores:", scores)
 print("Mean CV accuracy:", scores.mean())
+end_time = time.time() 
+
+elapsed = end_time - start_time
+print(f"⏱ Elapsed time: {elapsed:.2f} seconds")

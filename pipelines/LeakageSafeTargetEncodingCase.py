@@ -1,3 +1,6 @@
+import time
+
+start_time = time.time()
 import sys
 import subprocess
 def run_uv_sync():
@@ -123,3 +126,7 @@ model.fit(X_train_final, y_train)
 
 score = model.score(X_test_final, y_test)
 print(f"Test accuracy: {score}")
+end_time = time.time() 
+
+elapsed = end_time - start_time
+print(f"⏱ Elapsed time: {elapsed:.2f} seconds")

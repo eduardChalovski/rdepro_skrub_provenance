@@ -507,6 +507,30 @@ These experiments provide insight into how the system behaves under realistic wo
 Here are commands for each singiliuar pipeline and for all of them together. In general, all pipelines must be run using 
 **python -m pipelines.** with the flag **--track-provenance** in the end to run them
 
+If you only wish to use our provenance module and not the pipeline use cases, simply add this at the top of your code of your
+pipeline:
+
+``
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--track-provenance",
+    action="store_true",
+    help="Enable provenance tracking"
+)
+args = parser.parse_args()
+if args.track_provenance:
+    print("Provenance is enabled")
+    from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
+    enable_why_data_provenance()
+else:
+    print("Provenance is disabled")
+print("Libraries imported")
+```
+
+For this to work, you need to jave src/rdepro_skrub_provenance in your folder
+
+
 Run all pipelines:
 Linux/MacOS:
 ```

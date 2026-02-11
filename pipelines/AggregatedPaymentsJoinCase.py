@@ -1,3 +1,6 @@
+import time
+
+start_time = time.time()
 import sys
 import subprocess
 print("Installing dependencies from uv.lock using PDM...")
@@ -109,3 +112,7 @@ learner = predictor.skb.make_learner(fitted=True)
 
 score = learner.score(split["test"])
 print(f"Test accuracy: {score}")
+end_time = time.time() 
+
+elapsed = end_time - start_time
+print(f"⏱ Elapsed time: {elapsed:.2f} seconds")

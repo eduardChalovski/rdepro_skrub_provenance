@@ -1,3 +1,6 @@
+import time
+
+start_time = time.time()
 import sys
 import subprocess
 def run_uv_sync():
@@ -172,3 +175,7 @@ def plot_box_results(named_results):
     )
     plt.show()
 plot_box_results(results)
+end_time = time.time() 
+
+elapsed = end_time - start_time
+print(f"⏱ Elapsed time: {elapsed:.2f} seconds")

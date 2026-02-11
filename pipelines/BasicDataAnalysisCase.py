@@ -1,3 +1,6 @@
+import time
+
+start_time = time.time()
 import sys
 from pathlib import Path
 import subprocess
@@ -135,3 +138,7 @@ X = model_df.drop("is_delayed", axis=1).skb.mark_as_X()
 y = model_df["is_delayed"].skb.mark_as_y()
 
 print(X.head())
+end_time = time.time() 
+
+elapsed = end_time - start_time
+print(f"⏱ Elapsed time: {elapsed:.2f} seconds")

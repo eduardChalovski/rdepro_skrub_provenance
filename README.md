@@ -21,7 +21,7 @@
 - [Project Structure](#project-structure)
 - [How to Run](#how-to-run)
 - [Results and Discussion](#results-and-discussion)
-- [Limitations and Future Work](#limitations-and-future-work)
+- [Current Limitations](#current-limitations)
 - [Authors](#authors)
 
 
@@ -538,8 +538,110 @@ python -m pipelines.VariousStringEncodersCase --track-provenance
 
 ---
 
-## Limitations and Future Work
-(Describe known limitations and possible extensions, such as broader pandas support, visualization of provenance graphs, or optimization strategies.)
+## Current Limitations
+
+We profiled the execution of a complex pipeline using `cProfile` and
+visualized the results with `snakeviz`. The analysis revealed two
+primary sources of overhead when provenance tracking is enabled:
+
+-   `dataop.py (eval)` → \~14 seconds\
+-   `_evaluation.py (handle_data_op)` → \~44 seconds
+
+For comparison, when provenance tracking is disabled, `handle_data_op`
+executes in **less than 1 second** for the same pipeline. This indicates
+that provenance tracking is responsible for the majority of the runtime
+overhead.
+
+Overall, in a full pipeline execution time of approximately 137 seconds,
+about 14 seconds (\~10%) can be attributed to additional
+provenance-related logic outside aggregation, while aggregation itself
+contributes the dominant overhead.
+
+### Root Cause: Aggregation with Provenance Lists
+
+A deeper inspection of the aggregation logic identified
+`_aggregate_series_pure_python` as the primary bottleneck.
+
+The main issue arises from injecting provenance information in the form
+of:
+
+    _prov: list
+
+During aggregation (e.g., `agg(prov_col=list)`), provenance IDs are
+collected into Python lists. This has an important consequence:
+
+-   The provenance column changes its dtype from `int64` to `object`.
+-   Once stored as Python objects, operations can no longer benefit from
+    NumPy's vectorized execution.
+-   Pandas falls back to pure Python handling for nested list
+    aggregation.
+
+Initially, we assumed that using optimized pandas aggregation functions
+would retain high performance due to NumPy-backed execution. However,
+this assumption does **not** hold for nested list aggregations. As soon
+as lists are involved, pandas cannot leverage its optimized C/NumPy
+routines, leading to significant slowdown.
+
+In short:
+
+> Aggregating provenance IDs into Python lists forces object dtype and
+> results in pure Python execution, which becomes the dominant
+> performance bottleneck.
+
+### Potential Future Improvement
+
+To address this overhead, a different provenance representation could be
+explored.
+
+Instead of collecting provenance IDs into lists like:
+
+    3 → [1, 2]
+
+we could keep them separate:
+
+    3 → 1  
+    3 → 2
+
+This approach would avoid converting the provenance column to `object`
+dtype and would allow operations to remain in `int64`, preserving
+NumPy-level vectorization.
+
+#### Advantages
+
+-   Retains `int64` dtype
+-   Enables vectorized NumPy execution
+-   Avoids pure Python aggregation bottleneck
+
+#### Disadvantages
+
+-   Significant row explosion
+-   Increased memory usage
+-   More complex bookkeeping
+-   Requires explicit tracking of input → output ID mappings
+
+To make this feasible, provenance data should likely be stored
+**separately from the main dataset**, rather than attached as additional
+columns. During pipeline execution, operations would need to be replayed
+on the detached provenance structure. This requires maintaining
+consistent mappings between input and output row IDs.
+
+While this design introduces additional implementation complexity and
+memory overhead, it may substantially improve runtime performance by
+preserving vectorized execution.
+
+### Summary of the Main Limitation
+
+The central performance limitation of the current approach is:
+
+> Using `agg(prov_col=list)` converts provenance columns from `int64` to
+> `object`, forcing pure Python execution and making aggregation
+> significantly slower.
+
+A more scalable solution would avoid list-based aggregation entirely and
+instead maintain provenance IDs in a flat, non-object
+representation---even if that requires additional rows or a detached
+provenance structure.
+
 
 ---
 

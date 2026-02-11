@@ -1,3 +1,7 @@
+# Experiments
+
+Below are instructions for running the pipelines, conducting the experiments, and the corresponding analysis.
+
 Run all pipelines:
 Linux/MacOS:
 ```

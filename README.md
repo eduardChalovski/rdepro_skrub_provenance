@@ -1,7 +1,6 @@
 # Provenance Tracking for Skrub Data Ops Pipelines
 
 ## Table of Contents
-
 - [Overview](#overview)
 - [Motivation](#motivation)
 - [Provenance Tracking in skrub](#provenance-tracking-in-skrub)
@@ -9,9 +8,20 @@
   - [Implementation Details](#implementation-details)
     - [Code Location](#code-location)
     - [Main Components](#main-components)
+    - [Monkey Patching Strategy](#monkey-patching-strategy)
+    - [Provenance ID Encoding](#provenance-id-encoding)
+  - [Compatibility Assumptions](#compatibility-assumptions)
+    - [Column Selection](#column-selection)
+    - [GroupBy Usage](#groupby-usage)
+    - [Assign](#assign)
 - [Supported Operations](#supported-operations)
   - [ASPJ Pandas Operations](#aspj-pandas-operations)
+    - [Aggregation Handling](#aggregation-handling)
+    - [Selection Handling](#selection-handling)
+    - [Projection Handling](#projection-handling)
+    - [Join Handling](#join-handling)
   - [scikit-learn Estimators](#scikit-learn-estimators)
+  - [Extensibility to Other Libraries](#extensibility-to-other-libraries)
   - [Train/Test Split](#traintest-split)
 - [Inspecting Provenance](#inspecting-provenance)
 - [Pipeline Use Cases](#pipeline-use-cases)
@@ -20,8 +30,7 @@
 - [Experiments](#experiments)
 - [Project Structure](#project-structure)
 - [How to Run](#how-to-run)
-- [Results and Discussion](#results-and-discussion)
-- [Current Limitations](#current-limitations)
+- [Potential Future Improvement](#potential-future-improvement)
 - [Authors](#authors)
 
 
@@ -70,6 +79,32 @@ The main logic is implemented in:
   Utilities for table ID definition and provenance evaluation.
 
 ---
+
+## Compatibility Assumptions
+
+### Column Selection
+Use:
+```
+df.skb.select(["col1", "col2"])
+```
+
+Direct indexing is not supported for provenance propagation.
+
+---
+
+### GroupBy Usage
+GroupBy must always be followed by `agg`.
+
+---
+
+### Assign
+`assign` must follow:
+```
+df.assign(col=df[col])
+```
+
+---
+
 
 ### Main Components
 

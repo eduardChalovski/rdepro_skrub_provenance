@@ -5,7 +5,6 @@ Linux/MacOS:
 ```
 
 
-
 Windows:
 ```
 powershell -ExecutionPolicy Bypass -File run_all_pipelines.ps1
@@ -121,6 +120,39 @@ python -m pipelines.VariousStringEncodersCase --track-provenance
 
 ## Results and Discussion
 (Summarize key findings, performance results, and lessons learned.)
+
+
+---
+
+
+## Benchmarks
+
+To execute all benchmarks for scaling:
+
+```
+python -m benchmarks.benchmark_run_all
+```
+
+
+You can also run specific benchmarks individually:
+
+Runtime as a function of number of rows:
+
+```
+python -m benchmarks.benchmark_runtime_n_rows
+```
+
+Runtime as a function of number of operators:
+
+```
+python -m benchmarks.benchmark_runtime_n_operators
+```
+
+Memory overhead:
+
+```
+python -m benchmarks.benchmark_memory
+```
 
 ---
 

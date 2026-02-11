@@ -241,8 +241,24 @@ this assumption does **not** hold for nested list aggregations. As soon
 as lists are involved, pandas cannot leverage its optimized C/NumPy
 routines, leading to significant slowdown.
 
+
 In short:
 
 > Aggregating provenance IDs into Python lists forces object dtype and
 > results in pure Python execution, which becomes the dominant
 > performance bottleneck.
+
+
+### Summary of the Main Limitation
+
+The central performance limitation of the current approach is:
+
+> Using `agg(prov_col=list)` converts provenance columns from `int64` to
+> `object`, forcing pure Python execution and making aggregation
+> significantly slower.
+
+A more scalable solution would avoid list-based aggregation entirely and
+instead maintain provenance IDs in a flat, non-object
+representation---even if that requires additional rows or a detached
+provenance structure.
+

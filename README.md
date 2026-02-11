@@ -505,8 +505,18 @@ These experiments provide insight into how the system behaves under realistic wo
 ---
 
 ## How to Run
-Here are commands for each singiliuar pipeline and for all of them together. In general, all pipelines must be run using 
-**python -m pipelines.** with the flag **--track-provenance** in the end to run them
+Here are the commands to run each individual pipeline, as well as all pipelines together.
+**General rule:** All pipelines should be executed using:
+
+```
+python -m pipelines
+```
+
+To run them with the provenance tracking enabled, include the flag **--track-provenance** in the end like this:
+
+```
+python -m pipelines.pipeline1 --track-provenance
+```
 
 If you only wish to use our provenance module and not the pipeline use cases, simply add this at the top of your code of your
 pipeline:
@@ -517,7 +527,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--track-provenance",
     action="store_true",
-    help="Enable provenance tracking"
+    help="Enable provenance tracking."
 )
 args = parser.parse_args()
 if args.track_provenance:
@@ -529,7 +539,7 @@ else:
 print("Libraries imported")
 ```
 
-For this to work, you need to jave src/rdepro_skrub_provenance in your folder
+For this to work, you need to have src/rdepro_skrub_provenance in your folder
 
 
 Run all pipelines:

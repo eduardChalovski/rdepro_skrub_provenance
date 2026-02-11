@@ -55,13 +55,13 @@ python -m pipelines.HandsOnColumnSelectionTransformersCase --track-provenance
 ```
 
 
-Imbalanced Undersampling
+Customer Churn
 ```
-python -m pipelines.ImbalancedUnderSamplingCase
+python -m pipelines.CustomerChurnCase
 ```
 
 ```
-python -m pipelines.ImbalancedUnderSamplingCase --track-provenance
+python -m pipelines.CustomerChurnCase --track-provenance
 ```
 
 

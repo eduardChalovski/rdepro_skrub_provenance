@@ -510,7 +510,7 @@ Here are commands for each singiliuar pipeline and for all of them together. In 
 If you only wish to use our provenance module and not the pipeline use cases, simply add this at the top of your code of your
 pipeline:
 
-``
+```
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument(

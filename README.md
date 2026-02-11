@@ -83,25 +83,54 @@ The main logic is implemented in:
 ## Compatibility Assumptions
 
 ### Column Selection
+
 Use:
+
 ```
 df.skb.select(["col1", "col2"])
 ```
 
 Direct indexing is not supported for provenance propagation.
 
+Example:
+
+```
+df[["col1", "col2"]]
+```
+
 ---
 
 ### GroupBy Usage
 GroupBy must always be followed by `agg`.
+Examples:
+Not supported:
+
+```
+order_items.groupby('order_id')["price"].sum()
+```
+
+Equivalent Supported:
+
+```
+order_items.groupby('order_id').agg({"price": sum})
+```
 
 ---
 
 ### Assign
 `assign` must follow:
+
 ```
 df.assign(col=df[col])
 ```
+
+Assumption: source and target DataFrame are the same object.
+
+If a column comes from another DataFrame:
+
+- Merge first
+- Then assign
+- Then drop unnecessary columns
 
 ---
 

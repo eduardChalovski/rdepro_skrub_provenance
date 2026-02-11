@@ -15,7 +15,6 @@ def run_uv_sync():
         sys.exit(1)
 run_uv_sync()
 print("Done!")
-print("Done!")
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 # End-to-End Data Analysis

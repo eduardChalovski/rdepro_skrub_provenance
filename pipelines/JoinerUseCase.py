@@ -22,7 +22,6 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 import skrub
 from skrub import Joiner
 import argparse
-
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--track-provenance",

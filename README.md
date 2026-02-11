@@ -708,6 +708,29 @@ A deeper inspection of the aggregation logic identified
   <img src="benchmark_logs/plots/limitations_4.png" width="100%">
 </p>
 
+To reproduce these results, the following lines should be executed:
+
+Run the following commands to profile the scripts:
+
+```
+python -m cProfile -o SquashingScalerCase_without_provenance.out .\pipelines\SquashingScalerCase.py
+python -m cProfile -o SquashingScalerCase_with_provenance.out .\pipelines\SquashingScalerCase.py --track-provenance
+```
+
+To open the generated profiling files in SnakeViz:
+
+```
+snakeviz SquashingScalerCase_without_provenance.out
+snakeviz SquashingScalerCase_with_provenance.out
+```
+
+The files used for this visualization can also be inspected via:
+
+```
+snakeviz "benchmark_logs/SquashingScalerCase_without_provenance.out"
+snakeviz "benchmark_logs/SquashingScalerCase_with_provenance.out"
+```
+
 The main issue arises from injecting provenance information in the form
 of:
 

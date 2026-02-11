@@ -368,26 +368,116 @@ Metrics include:
 - Execution time overhead
 - Memory usage overhead
 
-The results help quantify the trade-offs between transparency and performance.
+All benchmarks are executed on the following system:
+- Processor	AMD Ryzen 7 4800H with Radeon Graphics (2.90 GHz)
+- Installed RAM	16,0 GB (15,4 GB usable)
+- System type	64-bit operating system, x64-based processor
+
+### Benchmark: Memory Overhead - Single Aggregation
+
+<p align="center">
+  <img src="benchmark_logs/plots/benchmark_memory_agg.png" width="65%">
+</p>
+
+**Goal**
+
+Compare the memory footprint of different collection types when sequentially merging and aggregating DataFrames 10 times, focusing on the overhead introduced by collecting provenance ids in the collections.
+
+**Setup**
+- The same data, stored in different skrub variables (each with unique provenance IDs), is repeatedly merged into the final result, generating new provenance IDs at each step.
+- The benchmark performs a max aggregation over identical non provenance values, so the memory used by the actual data does not increase.
+- Memory growth comes solely from the lists of provenance IDs.
+- Therefore, any observed memory overhead is entirely due to provenance tracking.
+
+**Key Findings**
+- Lists are more memory-efficient than sets.
+- A flat list [1,2,3] (list_reduce) uses more memory than a nested structure (list) [[[1],2],3].
+- The difference likely arises from implementation details: list_reduce generates empty lists [], while list may produce NaN values in this scenario.
 
 
-Benchmark Memory overhead for Aggregation
+### Benchmark: Runtime Overhead – Consecutive `merge + agg`
 
-![Benchmark_memory_agg](benchmark_logs/plots/benchmark_memory_agg.png)
+<p align="center">
+  <img src="benchmark_logs/plots/benchmark_runtime_n_operators_aggregation.png" width="70%">
+</p>
+
+**Goal**
+
+Evaluate scalability and identify differences between provenance collection strategies.
 
 
-Benchmark runtime overheadconsecutive execution of merge + agg
+**Setup**
 
-![benchmark_runtime_n_operators_aggregation](benchmark_logs/plots/benchmark_runtime_n_operators_aggregation.png)
+Using the same setup as in the memory benchmark, this experiment measures 
+runtime overhead when repeatedly executing `merge` + `agg` operations.  
+Different strategies for collecting provenance IDs inside the aggregation 
+function are compared.
+
+**Key Findings**
+
+- Runtime scales poorly with the number of consecutive operations.
+- The growth appears close to quadratic.
+- No significant performance differences are observed between the tested functions.
+- Overhead is dominated by repeated provenance handling rather than the specific aggregation strategy.
 
 
-Benchmark runtime overhead for different estimators
 
-![benchmark_runtime_n_rows_different_estimators](benchmark_logs/plots/benchmark_runtime_n_rows_different_estimators.png)
 
-Benchmark runtime overhead for different reduce funtions in aggregation
+### Benchmark: Runtime Overhead – Different Estimators
 
-![benchmark_runtime_n_rows_different_reduce_functions](benchmark_logs/plots/benchmark_runtime_n_rows_different_reduce_functions.png)
+<p align="center">
+  <img src="benchmark_logs/plots/benchmark_runtime_n_rows_different_estimators.png" width="70%">
+</p>
+
+**Goal**
+
+This benchmark evaluates whether different estimators introduce varying 
+absolute runtime overhead when provenance tracking is enabled.
+
+**Setup**
+
+The runtime is measured across three sklearn-based estimators while 
+processing up to 10 million rows.
+
+**Key Findings**
+
+- Most sklearn estimators show similar absolute overhead.
+- The measured overhead is approximately **0.5 seconds for 10 million rows**.
+- The overhead primarily results from dropping and reattaching provenance columns.
+- `TableVectorizer` shows higher variance.
+  - This is likely due to its longer execution time.
+  - Longer runtimes increase susceptibility to background system noise.
+
+Overall, the estimator choice has minimal impact on provenance overhead.
+
+## Benchmark: Runtime Overhead – Different Reduce Functions
+
+<p align="center">
+  <img src="benchmark_logs/plots/benchmark_runtime_n_rows_different_reduce_functions.png" width="70%">
+</p>
+
+
+**Goal**
+
+Compare runtime overhead introduced by different aggregation reduce functions.
+
+**Setup**
+
+- Aggregation pattern:
+  `.agg({"text": count, "_prov0": agg_func, "_prov1": agg_func})`
+- Runtime is averaged over **5 runs**
+- Evaluated across increasing numbers of rows
+
+**Key Findings**
+
+- `list` is the fastest reduce function.
+- Despite being the fastest option, it still introduces significant overhead.
+- For 10 million rows:
+  - Baseline runtime: ~0.5 seconds
+  - With provenance: ~2 seconds
+  - ≈ 3× runtime increase
+
+The overhead grows with dataset size and remains substantial even for the most efficient reduce function.
 
 ---
 
@@ -415,8 +505,42 @@ These experiments provide insight into how the system behaves under realistic wo
 ---
 
 ## How to Run
-Here are commands for each singiliuar pipeline and for all of them together. In general, all pipelines must be run using 
-**python -m pipelines.** with the flag **--track-provenance** in the end to run them
+Here are the commands to run each individual pipeline, as well as all pipelines together.
+**General rule:** All pipelines should be executed using:
+
+```
+python -m pipelines
+```
+
+To run them with the provenance tracking enabled, include the flag **--track-provenance** in the end like this:
+
+```
+python -m pipelines.pipeline1 --track-provenance
+```
+
+If you only wish to use our provenance module and not the pipeline use cases, simply add this at the top of your code of your
+pipeline:
+
+```
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--track-provenance",
+    action="store_true",
+    help="Enable provenance tracking."
+)
+args = parser.parse_args()
+if args.track_provenance:
+    print("Provenance is enabled")
+    from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
+    enable_why_data_provenance()
+else:
+    print("Provenance is disabled")
+print("Libraries imported")
+```
+
+For this to work, you need to have src/rdepro_skrub_provenance in your folder
+
 
 Run all pipelines:
 Linux/MacOS:

@@ -1,5 +1,4 @@
 import time
-
 start_time = time.time()
 import sys
 from pathlib import Path
@@ -7,7 +6,6 @@ import subprocess
 def run_uv_sync():
     """Install dependencies via uv before running the rest of the pipeline"""
     try:
-        # Use subprocess to run shell commands
         subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
         print("✅ uv dependencies installed successfully")
     except subprocess.CalledProcessError as e:
@@ -39,6 +37,7 @@ if args.track_provenance:
 else:
     print("Provenance is disabled")
 print("Libraries imported")
+
 customers = skrub.var("customers", pd.read_csv(f'./src/datasets/olist_customers_dataset.csv').sample(frac = 0.01))
 orders = skrub.var("orders", pd.read_csv(f'./src/datasets/olist_orders_dataset.csv').sample(frac = 0.01))
 order_items = skrub.var("order_items", pd.read_csv(f'./src/datasets/olist_order_items_dataset.csv').sample(frac = 0.01))
@@ -67,8 +66,6 @@ for col in ['total_items', 'total_price', 'total_freight', 'total_payment']:
 
 orders_full = orders_full.assign(bad_review = (orders_full['review_score'] <= 2).astype(int))
 y = orders_full['bad_review'].skb.mark_as_y()
-# print("y")
-# print(y.skb.eval())
 
 first_product_per_order = order_items.skb.select(['order_id','product_id']).drop_duplicates('order_id')
 
@@ -111,74 +108,23 @@ preprocessor = ColumnTransformer(
     ]
 )
 
-#pipeline = Pipeline([
- #   ('preproc', preprocessor),
-  #  ('clf', HistGradientBoostingClassifier(random_state=42))
-#])
-# from sklearn.ensemble import HistGradientBoostingClassifier
-# from functools import wraps
-
-# orig_fit = HistGradientBoostingClassifier.fit
-
-# def debug_fit(self, X, y=None, *args, **kwargs):
-#     print("\n[DEBUG] HGB.fit called")
-
-#     # --- X diagnostics ---
-#     print("[DEBUG] X type:", type(X))
-#     print("[DEBUG] X dtypes summary:")
-#     print(X.dtypes.value_counts())
-
-#     bad_dtypes = X.dtypes[X.dtypes == "object"]
-#     if len(bad_dtypes):
-#         print("[DEBUG] object dtype columns:", list(bad_dtypes.index)[:10])
-
-#     # --- y diagnostics ---
-#     print("[DEBUG] y type:", type(y))
-#     if y is not None:
-#         try:
-#             import numpy as np
-#             y_arr = np.asarray(y)
-#             print("[DEBUG] y array shape:", y_arr.shape)
-#             print("[DEBUG] y array dtype:", y_arr.dtype)
-#             print("[DEBUG] y first element:", y_arr[0])
-#         except Exception as e:
-#             print("[DEBUG] y conversion failed:", e)
-
-#     return orig_fit(self, X, y, *args, **kwargs)
-
-
-# HistGradientBoostingClassifier.fit = debug_fit
-
 clf = HistGradientBoostingClassifier(random_state=42)
 
 Xpre = (orders_full.skb.select(numeric_features + categorical_features))
 X = Xpre.skb.apply(preprocessor).skb.mark_as_X()
-# print(evaluate_provenance(X))
-# provX_cols = X.skb.preview().columns
-# X = X.drop(columns=[col for col in provX_cols if col.startswith("_prov")])
 pipeline = X.skb.apply(clf, y=y)
 
 print(pipeline.skb.draw_graph().open())
-# all_cols = pipeline.skb.preview()
-# prov_cols = [col for col in all_cols if col.startswith("_prov")]
-learner = pipeline.skb.make_learner(fitted=True)#fitted=True) # testing if it is because of fitted=True(fitted=True)
-# print("the error is thrown because of the fitted= True")
-#cv_results = cross_validate(pipeline, X, y, cv=5, return_train_score=True, scoring='roc_auc')
-#print(f"Mean ROC AUC: {np.mean(cv_results['test_score']):.3f} ± {np.std(cv_results['test_score']):.3f}")
+learner = pipeline.skb.make_learner(fitted=True)
 
 split = pipeline.skb.train_test_split(random_state= 0)
-# learner.fit(split["train"])       #TODO: question: why we use fitted true and then split train test? don't we fit on both train and test splits?
 learner.score(split["test"])
-#pipeline.fit(X, y)
-#orders_full['bad_review_pred_proba'] = 
 
-# Show top 10 most likely bad reviews
-#pred = learner.predict(split["test"])
-# learner.predict
 values = bad_review_pred_proba = learner.report(environment=split["train"], mode="predict_proba", open=False)["result"]
 print(values)
-#PIPELINE RESULT CAN BE SORTED AND ADJUSTED TO DERRIVE THE LOGICAL CONCLUSION BUT FOR THE PURPOSE OF THE PROJECT IT WORKS
+#PIPELINE RESULT CAN BE SORTED AND ADJUSTED TO DERRIVE THE LOGICAL CONCLUSION BUT FOR THE PURPOSE OF THE PROJECT IT WORKS.
+#WE DECIDED NOT TO INCLUDE THE FINAL CALCULATION AND MACHINE LEARNING TO SAVE TIME AND BECAUSE WE ANTED TO ONLY FOCUS ON
+#PREPROCESSING
 end_time = time.time() 
-
 elapsed = end_time - start_time
 print(f"⏱ Elapsed time: {elapsed:.2f} seconds")

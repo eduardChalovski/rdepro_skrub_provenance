@@ -1,20 +1,16 @@
 import time
-
 start_time = time.time()
 import sys
 import subprocess
 def run_uv_sync():
     """Install dependencies via uv before running the rest of the pipeline"""
     try:
-        # Use subprocess to run shell commands
         subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
         print("✅ uv dependencies installed successfully")
     except subprocess.CalledProcessError as e:
         print("❌ uv install failed")
         print(e)
         sys.exit(1)
-
-# Run this first
 run_uv_sync()
 print("Done!")
 from pathlib import Path
@@ -39,7 +35,6 @@ if args.track_provenance:
 else:
     print("Provenance is disabled")
 print("Libraries imported")
-
 
 customers = skrub.var("customers", pd.read_csv(f'./src/datasets/olist_customers_dataset.csv').sample(frac = 0.01))
 orders = skrub.var("orders", pd.read_csv(f'./src/datasets/olist_orders_dataset.csv').sample(frac = 0.01))

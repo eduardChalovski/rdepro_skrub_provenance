@@ -1,5 +1,5 @@
 import time
-
+#THIS IS A PIPELINE DOWNLOADED FROM KAGGLE. THE COMMENTS ARE THE CODE BEFORE IT WAS SKRUBIFIED
 start_time = time.time()
 import sys
 from pathlib import Path
@@ -7,7 +7,6 @@ import subprocess
 def run_uv_sync():
     """Install dependencies via uv before running the rest of the pipeline"""
     try:
-        # Use subprocess to run shell commands
         subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
         print("✅ uv dependencies installed successfully")
     except subprocess.CalledProcessError as e:
@@ -29,10 +28,8 @@ customer satisfaction, and key operational drivers.
 """
 import pandas as pd
 import numpy as np
-import seaborn as sns
 import skrub
 from skrub import ToDatetime
-sns.set(style="whitegrid")
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -79,7 +76,6 @@ date_cols = [
 toDateTimeEncoder = ToDatetime()
 df= df.skb.apply(toDateTimeEncoder, cols= date_cols)
 
-# Only delivered orders make sense for delay analysis
 df = df[df["order_status"] == "delivered"]
 
 #df["delivery_delay"] = (
@@ -92,7 +88,6 @@ df = df.assign(delivery_delay = (
     df["order_estimated_delivery_date"]
 ).dt.days)
 
-# Note from Eddie: why don't we add df["freight_value"] if it was originally the case?
 #df["order_value"] = df["price"] + df["freight_value"]
 df = df.assign(order_value = df["price"])
 
@@ -113,14 +108,7 @@ df = df.dropna(subset=[
 df = df[(df["delivery_delay"] >= -20) & (df["delivery_delay"] <= 60)]
 
 df.skb.draw_graph()
-#report = df.skb.full_report()
-#report
-#display(df["_skrub_provenance_"])
 print(df.head())
-
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, confusion_matrix
 
 model_df = df.skb.select([
     "freight_value",

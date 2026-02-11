@@ -1,5 +1,5 @@
 import time
-
+from sklearn.model_selection import train_test_split
 start_time = time.time()
 import sys
 import subprocess
@@ -82,6 +82,9 @@ feature_cols = [
     "customer_state",
 ]
 
+Xraw = df.skb.select(feature_cols)
+y = df["is_late"].skb.mark_as_y()
+
 print("Building a concrete pandas dataframe (preview)...")
 df_pd = df.skb.preview()
 print("Preview built:", df_pd.shape)
@@ -119,6 +122,8 @@ preprocessor = ColumnTransformer(
     remainder="drop",
 )
 
+X_train_enc = preprocessor.fit_transform(X_train)
+X_test_enc = preprocessor.transform(X_test)
 X = Xraw.skb.apply(preprocessor).skb.mark_as_X()
 
 

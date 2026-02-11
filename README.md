@@ -1,5 +1,30 @@
 # Provenance Tracking for Skrub Data Ops Pipelines
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Motivation](#motivation)
+- [Provenance Tracking in skrub](#provenance-tracking-in-skrub)
+  - [Design Goals](#design-goals)
+  - [Implementation Details](#implementation-details)
+    - [Code Location](#code-location)
+    - [Main Components](#main-components)
+- [Supported Operations](#supported-operations)
+  - [ASPJ Pandas Operations](#aspj-pandas-operations)
+  - [scikit-learn Estimators](#scikit-learn-estimators)
+  - [Train/Test Split](#traintest-split)
+- [Inspecting Provenance](#inspecting-provenance)
+- [Pipeline Use Cases](#pipeline-use-cases)
+- [Testing](#testing)
+- [Benchmarks](#benchmarks)
+- [Experiments](#experiments)
+- [Project Structure](#project-structure)
+- [How to Run](#how-to-run)
+- [Results and Discussion](#results-and-discussion)
+- [Limitations and Future Work](#limitations-and-future-work)
+- [Authors](#authors)
+
+
 ## Overview
 This project was developed as part of the Responsible Data Engineering Project at the DEEM Lab, TU Berlin.
 
@@ -73,11 +98,7 @@ To minimize memory overhead and benefit from optimized numeric operations:
   - **Table ID** (upper 16 bits)
   - **Row ID** (lower 48 bits)
 
-The table ID is bit-shifted 48 bits to the left:
-
-```
-(table_id << 48) | row_id
-```
+The table ID is bit-shifted 48 bits to the left: ```(table_id << 48) | row_id```
 
 This encoding supports:
 - ~65,000 tables (2¹⁶)
@@ -108,11 +129,7 @@ If the DataOp corresponds to a pandas `.agg` call:
 
 This logic is implemented in provenance_agg(dataop)
 
-Internally, the DataOp is inspected via:
-
-```
-dataop._skrub_impl.__dict__
-```
+Internally, the DataOp is inspected via: ```dataop._skrub_impl.__dict__```
 
 #### Selection Handling 
 Selection is handled automatically by pandas once provenance ID columns have been introduced into the table.
@@ -120,18 +137,11 @@ Selection is handled automatically by pandas once provenance ID columns have bee
 #### Projection Handling
 Projection is supported through the use of the skrub `SelectCols` estimator.
 
-If pandas-style column selection is used directly:
-```
-df[[col_name1, col_name2]]
-```
+If pandas-style column selection is used directly: ```df[[col_name1, col_name2]]```
 
 the provenance columns are **not propagated**, as they are not included in the selected columns.
 
-To ensure correct provenance propagation, projection must be performed using:
-
-```
-df.skb.select([col_name1, col_name2])
-```
+To ensure correct provenance propagation, projection must be performed using:```df.skb.select([col_name1, col_name2])```
 
 Internally, `.skb.select()` creates a `SelectCols` DataOp that is applied via `.skb.apply(SelectCols)`. During the DataOp evaluation, provenance columns are injected into the arguments of `SelectCols`, ensuring that projection preserves the associated provenance information. Further details are provided in the section describing the handling of `ApplyDataOp` execution.
 
@@ -159,16 +169,9 @@ Three cases are handled:
 ---
 
 ### Extensibility to Other Libraries
-Provenance support can be extended to other pandas-compatible libraries by defining a function named:
+Provenance support can be extended to other pandas-compatible libraries by defining a function named: ```provenance_<function_name>```
 
-```
-provenance_<function_name>
-```
-
-Example:
-```
-provenance_sem_map
-```
+Example: ```provenance_sem_map```
 
 Such functions should be implemented as methods of the `ProvenanceModule` class. During execution, the appropriate provenance handler is discovered automatically using `getattr(ProvenanceModule, provenance_<function_name>)` and applied before the corresponding `DataOp` is evaluated. This follows a visitor-style pattern and allows new operations to be supported without modifying the core execution logic.
 
@@ -180,11 +183,7 @@ An example is `RandomUnderSampler` from the scikit-learn–compatible imbalanced
 ---
 
 ### Train/Test Split
-For `train_test_split`, provenance can be inspected via:
-
-```
-split["train"]["_skrub_X"]
-```
+For `train_test_split`, provenance can be inspected via:```split["train"]["_skrub_X"]```
 
 ---
 
@@ -371,6 +370,25 @@ Metrics include:
 
 The results help quantify the trade-offs between transparency and performance.
 
+
+Benchmark Memory overhead for Aggregation
+
+![Benchmark_memory_agg](benchmark_logs/plots/benchmark_memory_agg.png)
+
+
+Benchmark runtime overheadconsecutive execution of merge + agg
+
+![benchmark_runtime_n_operators_aggregation](benchmark_logs/plots/benchmark_runtime_n_operators_aggregation.png)
+
+
+Benchmark runtime overhead for different estimators
+
+![benchmark_runtime_n_rows_different_estimators](benchmark_logs/plots/benchmark_runtime_n_rows_different_estimators.png)
+
+Benchmark runtime overhead for different reduce funtions in aggregation
+
+![benchmark_runtime_n_rows_different_reduce_functions](benchmark_logs/plots/benchmark_runtime_n_rows_different_reduce_functions.png)
+
 ---
 
 ## Experiments
@@ -402,61 +420,123 @@ Here are commands for each singiliuar pipeline and for all of them together. In 
 
 Run all pipelines:
 Linux/MacOS:
-**./run_all_pipelines.sh**
+```
+./run_all_pipelines.sh
+```
+
 
 
 Windows:
-**powershell -ExecutionPolicy Bypass -File run_all_pipelines.ps1**
+```
+powershell -ExecutionPolicy Bypass -File run_all_pipelines.ps1
+```
+
 
 Aggregated Payments:
-**python -m pipelines.AggregatedPaymentsJoinCase**
-**python -m pipelines.AggregatedPaymentsJoinCase --track-provenance**
+```
+python -m pipelines.AggregatedPaymentsJoinCase
+```
+
+```
+python -m pipelines.AggregatedPaymentsJoinCase --track-provenance
+```
+
 
 
 Basic data analysis
-**python -m pipelines.BasicDataAnalysis**
-**python -m pipelines.BasicDataAnalysisCase --track-provenance**
+```
+python -m pipelines.BasicDataAnalysis
+```
+
+```
+python -m pipelines.BasicDataAnalysisCase --track-provenance
+```
+
 
 
 Fuzzy Joiner
-**python -m pipelines.FuzzyJoinerCase**
-**python -m pipelines.FuzzyJoinerCase --track-provenance**
+```
+python -m pipelines.FuzzyJoinerCase
+```
+
+```
+python -m pipelines.FuzzyJoinerCase --track-provenance
+```
+
 
 
 Hands-on Column Selection Transformers
-**python -m pipelines.HandsOnColumnSelectionTransformersCase**
-**python -m pipelines.HandsOnColumnSelectionTransformersCase --track-provenance**
+```
+python -m pipelines.HandsOnColumnSelectionTransformersCase
+```
+
+```
+python -m pipelines.HandsOnColumnSelectionTransformersCase --track-provenance
+```
 
 
 Imbalanced Undersampling
-**python -m pipelines.ImbalancedUnderSamplingCase**
-**python -m pipelines.ImbalancedUnderSamplingCase --track-provenance**
+```
+python -m pipelines.ImbalancedUnderSamplingCase
+```
+
+```
+python -m pipelines.ImbalancedUnderSamplingCase --track-provenance
+```
+
 
 
 Joiner
-**python -m pipelines.JoinerUseCase**
-**python -m pipelines.JoinerUseCase --track-provenance**
+```
+python -m pipelines.JoinerUseCase
+```
+
+```
+python -m pipelines.JoinerUseCase --track-provenance
+```
+
 
 
 Leakage-safe Target Encoding
-**python -m pipelines.LeakageSafeTargetEncodingCase**
-**python -m pipelines.LeakageSafeTargetEncodingCase --track-provenance**
+```
+python -m pipelines.LeakageSafeTargetEncodingCase
+```
+
+```
+python -m pipelines.LeakageSafeTargetEncodingCase --track-provenance
+```
+
 
 
 Spatial Join 
-**python -m pipelines.SpatialJoinCase**
-**python -m pipelines.SpatialJoinCase --track-provenance**
+```
+python -m pipelines.SpatialJoinCase
+```
+
+```
+python -m pipelines.SpatialJoinCase --track-provenance
+```
+
 
 
 Squashing Scaler
-**python -m pipelines.SquashingScalerCase**
-**python -m pipelines.SquashingScalerCase --track-provenance**
+```
+python -m pipelines.SquashingScalerCase
+```
+
+```
+python -m pipelines.SquashingScalerCase --track-provenance
+```
+
 
 
 Various String Encoders
-**python -m pipelines.VariousStringEncodersCase**
-**python -m pipelines.VariousStringEncodersCase --track-provenance**
-
+```
+python -m pipelines.VariousStringEncodersCase
+```
+```
+python -m pipelines.VariousStringEncodersCase --track-provenance
+```
 ---
 
 ## Results and Discussion
@@ -472,8 +552,8 @@ Various String Encoders
 ## Authors
 - Teodor Aleksiev 0530377
 - Jeanne
-- Yigit
-- Eduard Chalovski
+- Yigit Mesci 0505962
+- Eduard Chalovski 0412770
 
 ---
 

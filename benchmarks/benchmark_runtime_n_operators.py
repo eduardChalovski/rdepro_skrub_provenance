@@ -1,6 +1,6 @@
 from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance
 from benchmarks.benchmark_utils import make_dataset
-from skrub import TableVectorizer
+from time import perf_counter
 from pathlib import Path
 import skrub
 import csv
@@ -13,26 +13,23 @@ def run_pipeline(df_main, df_lookup, num_operations=1):
     # -------------------------
     # Initialization
     # -------------------------
-
-    var_main = skrub.var("df_main", df_main)
-    var_lookup = skrub.var("df_lookup", df_lookup)
-
-    mem_initial = var_main.memory_usage(deep=True).sum().skb.preview()
+    var_main, var_lookup = skrub.var("df_main", df_main), skrub.var("df_lookup", df_lookup)
 
     # -------------------------
     # Multiple Merges
     # -------------------------
-
     var_merged = var_main
+    t0 = perf_counter()
     for i in range(num_operations):
         var_merged = var_merged.merge(var_lookup, on="user_id", how="left",  suffixes=('', f'_dup{i}'))
-    mem_merge = var_merged.memory_usage(deep=True).sum().skb.preview()
+    merge_time = perf_counter() - t0
 
     # -------------------------
     # Multiple Aggregations with skrub variables
     # -------------------------
-
     var_agg = var_main
+    t0 = perf_counter()
+
     for i in range(num_operations):
         var_lookupi = skrub.var("var_lookup"+str(i), df_lookup)
 
@@ -46,54 +43,25 @@ def run_pipeline(df_main, df_lookup, num_operations=1):
             country_count=("country", "count"),
         )
 
-    # After the aggregation, get the memory usage
-    mem_agg = var_agg.memory_usage(deep=True).sum().skb.preview()
+    # After the aggregation, get the runtime overhead
+    merge_agg_time = perf_counter() - t0
 
 
-    # -------------------------
-    # Multiple TableVectorizer
-    # -------------------------
-
-    # here i need a vectorizer that can be applied multiple times one after another? maybe TableVectorizer is a good fit for that
-    var_vectorized = var_main
-    tv_with = TableVectorizer()
-    for _ in range(num_operations):
-        var_vectorized = var_vectorized.skb.apply(tv_with)
-
-    mem_tv = var_vectorized.memory_usage(deep=True).sum().skb.preview()
-    # -------------------------
-    # Totals
-    # -------------------------
-
-    total_mem_with = (
-        mem_initial
-        + mem_merge
-        + mem_agg
-        + mem_tv
-    )
 
     return {
-        # initialization
-        "mem_initialization": mem_initial,
-
         # merge
-        "mem_merge": mem_merge,
+        "runtime_merge": merge_time,
 
         # aggregation
-        "mem_agg": mem_agg,
+        "runtime_aggregation": merge_agg_time,
 
-        # tablevectorizer
-        "mem_tv": mem_tv,
-
-        # totals
-        "total_mem_with": total_mem_with,
     }
 
 
-def memory_benchmark_for_scaling_operations(
+def benchmark_runtime_n_operators(
         dataset_sizes=None,
         num_operations_list=[1, 2, 4, 6, 8, 10],
-        output_file_name= "memory_results_scaling.csv",
+        output_file_name= "runtime_results_scaling.csv",
         enalbe_provenance=True,
         agg_func_for_prov_cols=list,
     ):
@@ -107,15 +75,9 @@ def memory_benchmark_for_scaling_operations(
 
     FIELDNAMES = [
         "n_rows_input", "num_operations",
-        "mem_initialization",
+        "runtime_merge",
+        "runtime_aggregation",
 
-        "mem_merge",
-
-        "mem_agg",
-
-        "mem_tv",
-
-        "total_mem_with",
     ]
 
     write_header = not CSV_PATH.exists()
@@ -127,7 +89,7 @@ def memory_benchmark_for_scaling_operations(
 
         for n in dataset_sizes:
             for num_operations in num_operations_list:
-                print(f"Running memory benchmark n={n}, operations={num_operations}")
+                print(f"Running runtime benchmark n={n}, operations={num_operations}")
                 df_main, df_lookup = make_dataset(n)
 
                 results = run_pipeline(
@@ -146,8 +108,8 @@ def memory_benchmark_for_scaling_operations(
 
 
 if __name__ == "__main__":
-    memory_benchmark_for_scaling_operations(enalbe_provenance=False, output_file_name="memory_benchmark_no_provenance.csv")
-    memory_benchmark_for_scaling_operations(enalbe_provenance=True, agg_func_for_prov_cols=list, output_file_name="memory_benchmark_provenance_list.csv")
-    memory_benchmark_for_scaling_operations(enalbe_provenance=True, agg_func_for_prov_cols=frozenset, output_file_name="memory_benchmark_provenance_frozenset.csv")
-    memory_benchmark_for_scaling_operations(enalbe_provenance=True, agg_func_for_prov_cols="list_reduce", output_file_name="memory_benchmark_provenance_list_reduce.csv")
-    memory_benchmark_for_scaling_operations(enalbe_provenance=True, agg_func_for_prov_cols="set_reduce", output_file_name="memory_benchmark_provenance_set_reduce.csv")
+    # benchmark_runtime_n_operators(enalbe_provenance=False, output_file_name="benchmark_runtime_n_operators_no_provenance.csv")
+    # benchmark_runtime_n_operators(enalbe_provenance=True, agg_func_for_prov_cols=list, output_file_name="benchmark_runtime_n_operators_provenance_list.csv")
+    # benchmark_runtime_n_operators(enalbe_provenance=True, agg_func_for_prov_cols=frozenset, output_file_name="benchmark_runtime_n_operators_provenance_frozenset.csv")
+    benchmark_runtime_n_operators(enalbe_provenance=True, agg_func_for_prov_cols="list_reduce", output_file_name="benchmark_runtime_n_operators_provenance_list_reduce.csv")
+    # benchmark_runtime_n_operators(enalbe_provenance=True, agg_func_for_prov_cols="set_reduce", output_file_name="benchmark_runtime_n_operators_provenance_set_reduce.csv")

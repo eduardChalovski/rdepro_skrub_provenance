@@ -1,12 +1,10 @@
 import time
-
 start_time = time.time()
 import sys
 import subprocess
 def run_uv_sync():
     """Install dependencies via uv before running the rest of the pipeline"""
     try:
-        # Use subprocess to run shell commands
         subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
         print("✅ uv dependencies installed successfully")
     except subprocess.CalledProcessError as e:
@@ -17,12 +15,9 @@ run_uv_sync()
 print("Done!")
 from pathlib import Path
 import argparse
-
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-
 import pandas as pd
 import skrub
-
 from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler
@@ -58,7 +53,6 @@ df = (
     .merge(products_en.skb.select(["product_id", "product_category_en"]), on="product_id", how="left")
 )
 
-# Lazy datetime parsing
 df = df.assign(
     order_delivered_customer_date=lambda d: pd.to_datetime(d["order_delivered_customer_date"], errors="coerce"),
     order_estimated_delivery_date=lambda d: pd.to_datetime(d["order_estimated_delivery_date"], errors="coerce"),
@@ -74,7 +68,6 @@ df = df.assign(
     product_category_en=lambda d: d["product_category_en"].fillna("unknown"),
 )
 
-# Materialize once (so we can split without fitting a dummy model on strings)
 print("Building a concrete pandas dataframe (preview)...")
 df_pd = df.skb.preview()
 print("Preview built:", df_pd.shape)

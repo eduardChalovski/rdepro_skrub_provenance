@@ -1,5 +1,4 @@
 import time
-
 start_time = time.time()
 import sys
 from pathlib import Path
@@ -32,7 +31,6 @@ else:
 
 print("Libraries imported")
 
-
 customers = skrub.var("customers", pd.read_csv("./src/datasets/olist_customers_dataset.csv"))
 orders = skrub.var("orders", pd.read_csv("./src/datasets/olist_orders_dataset.csv"))
 order_items = skrub.var("order_items", pd.read_csv("./src/datasets/olist_order_items_dataset.csv"))
@@ -42,7 +40,6 @@ cat_tr = skrub.var("cat_tr", pd.read_csv("./src/datasets/product_category_name_t
 
 print("Files read, starting preprocessing")
 
-# Join products + translated category
 products_en = (
     products
     .merge(cat_tr, on="product_category_name", how="left")
@@ -71,12 +68,10 @@ orders_full = orders_full.assign(
     order_estimated_delivery_date=lambda d: pd.to_datetime(d["order_estimated_delivery_date"], errors="coerce"),
 )
 
-# Target: late delivery
 orders_full = orders_full.assign(
     is_late=lambda d: (d["order_delivered_customer_date"] > d["order_estimated_delivery_date"]).fillna(False).astype(int)
 )
 
-# A couple of simple numeric features
 orders_full = orders_full.assign(
     n_installments=lambda d: d["payment_installments"].fillna(0),
     payment_value=lambda d: d["payment_value"].fillna(0),
@@ -86,7 +81,6 @@ orders_full = orders_full.assign(
     product_photos_qty=lambda d: d["product_photos_qty"].fillna(0),
 )
 
-# Avoid leakage: do NOT use delivered/estimated dates as features
 feature_cols = [
     "order_purchase_timestamp",
     "payment_type",
@@ -101,7 +95,6 @@ feature_cols = [
     "customer_city",
 ]
 
-# Use skrub select so provenance columns (when enabled) are preserved correctly
 Xraw = orders_full.skb.select(feature_cols)
 y = orders_full["is_late"].skb.mark_as_y()
 
@@ -109,10 +102,8 @@ datetime_cols = ["order_purchase_timestamp"]
 numeric_cols = ["n_installments", "payment_value", "price", "freight_value", "product_weight_g", "product_photos_qty"]
 categorical_cols = ["payment_type", "product_category_en", "customer_state", "customer_city"]
 
-# Step 1: DatetimeEncoder is single-column -> must be applied via ApplyToCols
 dt_step = ApplyToCols(DatetimeEncoder(), cols=datetime_cols)
 
-# Step 2: standard sklearn preprocessing for num/cat
 preprocessor = ColumnTransformer(
     transformers=[
         ("num", Pipeline([
@@ -125,10 +116,9 @@ preprocessor = ColumnTransformer(
 ),
         ]), categorical_cols),
     ],
-    remainder="passthrough",  # keep datetime-encoded columns from dt_step
+    remainder="passthrough", 
 )
 
-# Apply in two stages
 X_dt = Xraw.skb.apply(dt_step)
 X = X_dt.skb.apply(preprocessor).skb.mark_as_X()
 
@@ -141,7 +131,6 @@ learner = predictor.skb.make_learner(fitted=True)
 score = learner.score(split["test"])
 print(f"Test accuracy: {score}")
 
-# Optional: inspect provenance
 if args.track_provenance:
     try:
         print(split["test"])

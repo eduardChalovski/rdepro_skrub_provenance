@@ -7,7 +7,6 @@ import subprocess
 def run_uv_sync():
     """Install dependencies via uv before running the rest of the pipeline"""
     try:
-        # Use subprocess to run shell commands
         subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
         print("✅ uv dependencies installed successfully")
     except subprocess.CalledProcessError as e:
@@ -47,10 +46,10 @@ print(order_items.columns)
 print(payments.columns)
 
 augmented_df = fuzzy_join(
-    order_items.skb.preview(),  # our table to join
-    payments.skb.preview(),  # the table to join with
-    left_on="product_id",  # the first join key column
-    right_on="order_id",  # the second join key column
+    order_items.skb.preview(), 
+    payments.skb.preview(), 
+    left_on="product_id",  
+    right_on="order_id",  
     add_match_info=True,
 )
 
@@ -59,7 +58,3 @@ end_time = time.time()
 
 elapsed = end_time - start_time
 print(f"⏱ Elapsed time: {elapsed:.2f} seconds")
-
-
-
-

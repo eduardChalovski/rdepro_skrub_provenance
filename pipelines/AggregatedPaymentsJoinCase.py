@@ -1,5 +1,4 @@
 import time
-
 start_time = time.time()
 import sys
 import subprocess
@@ -7,7 +6,6 @@ print("Installing dependencies from uv.lock using PDM...")
 def run_uv_sync():
     """Install dependencies via uv before running the rest of the pipeline"""
     try:
-        # Use subprocess to run shell commands
         subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
         print("✅ uv dependencies installed successfully")
     except subprocess.CalledProcessError as e:
@@ -19,10 +17,8 @@ print("Done!")
 from pathlib import Path
 import argparse
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-
 import pandas as pd
 import skrub
-
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
@@ -56,7 +52,6 @@ payments_agg = (
     .reset_index()
 )
 
-# Fill missing values 
 payments_agg = payments_agg.assign(
     total_payment=lambda d: d["total_payment"].fillna(0),
     n_payments=lambda d: d["n_payments"].fillna(0),
@@ -65,14 +60,12 @@ payments_agg = payments_agg.assign(
 )
 
 orders_full = orders.merge(payments_agg, on="order_id", how="left")
-
-# Parse dates 
+ 
 orders_full = orders_full.assign(
     order_delivered_customer_date=lambda d: pd.to_datetime(d["order_delivered_customer_date"], errors="coerce"),
     order_estimated_delivery_date=lambda d: pd.to_datetime(d["order_estimated_delivery_date"], errors="coerce"),
 )
 
-# Target: late delivery 
 orders_full = orders_full.assign(
     is_late=lambda d: (d["order_delivered_customer_date"] > d["order_estimated_delivery_date"]).fillna(False).astype(int)
 )
@@ -85,7 +78,6 @@ categorical_features = ["order_status"]
 Xraw = orders_full.skb.select(numeric_features + categorical_features)
 y = orders_full["is_late"].skb.mark_as_y()
 
-# Make preprocessing robust and compatible with pandas output
 ohe = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
 
 preprocessor = ColumnTransformer(

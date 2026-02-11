@@ -1,12 +1,10 @@
 import time
-
 start_time = time.time()
 import sys
 import subprocess
 def run_uv_sync():
     """Install dependencies via uv before running the rest of the pipeline"""
     try:
-        # Use subprocess to run shell commands
         subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
         print("✅ uv dependencies installed successfully")
     except subprocess.CalledProcessError as e:
@@ -62,7 +60,6 @@ order_payments_agg = order_payments.groupby('order_id').agg(
 orders_full = orders.merge(order_items_agg, on='order_id', how='left')
 orders_full = orders_full.merge(order_payments_agg, on='order_id', how='left')
 
-# Fill NaN payments/items with 0
 orders_full = orders_full.assign(total_items = orders_full['total_items'].fillna(0))
 orders_full = orders_full.assign(total_price = orders_full['total_price'].fillna(0))
 orders_full = orders_full.assign(total_freight = orders_full['total_freight'].fillna(0))
@@ -116,12 +113,6 @@ split = predictor.skb.train_test_split(random_state= 0)
 learner.score(split["test"])
 pred = learner.predict(split["test"])
 print(pred)   
-
-#customer_features = customer_features.assign(predicted_sum_payment =  learner.predict(split["test"]))
-#cv_results = customer_features['predicted_sum_payment'].skb.cross_validate(cv = 5, return_train_score = True)
-#print(f"R2 score: mean={np.mean(cv_results['test_score']):.3f}, std={np.std(cv_results['test_score']):.3f}")
-#print(f"mean fit time: {np.mean(cv_results['fit_time']):.3f} seconds")
-#print(customer_features[['customer_id', 'predicted_sum_payment']].head(20))
 
 # Uncomment to run the determenism check correctly
 # import pickle

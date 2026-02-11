@@ -1,12 +1,10 @@
 import time
-
 start_time = time.time()
 import sys
 import subprocess
 def run_uv_sync():
     """Install dependencies via uv before running the rest of the pipeline"""
     try:
-        # Use subprocess to run shell commands
         subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
         print("✅ uv dependencies installed successfully")
     except subprocess.CalledProcessError as e:
@@ -141,15 +139,12 @@ textPipe = X.skb.apply(vectorizerText)
 print("textPipe provenance:")
 print(textPipe.columns)
 print(textPipe[:10])
+
 textPipe = textPipe.skb.apply( HistGradientBoostingClassifier(
         max_depth=6,
         learning_rate=0.05,
         random_state=0,
     ), y = y)
-
-#gapLearner = gapPipe.skb.make_learner(fitted=True)
-#hashLearner = hashPipe.skb.make_learner(fitted=True)
-#textLearner = textPipe.skb.make_learner(fitted=True)
 
 gapResults = gapPipe.skb.cross_validate(cv=2)
 textResults = hashPipe.skb.cross_validate(cv=2)

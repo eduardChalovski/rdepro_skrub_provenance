@@ -693,19 +693,19 @@ A deeper inspection of the aggregation logic identified
 `_aggregate_series_pure_python` as the primary bottleneck.
 
 <p align="center">
-  <img src="benchmark_logs/plots/limitations_1.png" width="70%">
+  <img src="benchmark_logs/plots/limitations_1.png" width="100%">
 </p>
 
 <p align="center">
-  <img src="benchmark_logs/plots/limitations_2.png" width="70%">
+  <img src="benchmark_logs/plots/limitations_2.png" width="100%">
 </p>
 
 <p align="center">
-  <img src="benchmark_logs/plots/limitations_3.png" width="70%">
+  <img src="benchmark_logs/plots/limitations_3.png" width="100%">
 </p>
 
 <p align="center">
-  <img src="benchmark_logs/plots/limitations_4.png" width="70%">
+  <img src="benchmark_logs/plots/limitations_4.png" width="100%">
 </p>
 
 The main issue arises from injecting provenance information in the form

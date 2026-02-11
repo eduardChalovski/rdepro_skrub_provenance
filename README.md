@@ -102,7 +102,9 @@ df[["col1", "col2"]]
 
 ### GroupBy Usage
 GroupBy must always be followed by `agg`.
+
 Examples:
+
 Not supported:
 
 ```

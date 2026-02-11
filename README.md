@@ -371,23 +371,112 @@ Metrics include:
 The results help quantify the trade-offs between transparency and performance.
 
 
-Benchmark Memory overhead for Aggregation
+### Benchmark: Memory Overhead - Single Aggregation
 
-![Benchmark_memory_agg](benchmark_logs/plots/benchmark_memory_agg.png)
+<p align="center">
+  <img src="benchmark_logs/plots/benchmark_memory_agg.png" width="65%">
+</p>
+
+This benchmark compares the memory footprint of different collections by 
+sequentially merging and aggregating DataFrames 10 times.
+
+- The *no provenance* line performs a `max` over identical values.
+- Values remain the same but receive unique provenance IDs.
+- Memory overhead is therefore caused purely by provenance tracking.
+
+Observations:
+- Lists are more memory efficient than sets.
+- A flat list representation `[1,2,3]` (shown as `list_reduce` in the plot) performs worse than the nested structure `[[[1],2],3]`.
+- This is likely due to implementation details: `list_reduce` creates empty lists `[]`, whereas `list` may produce `NaN` values in this scenario.
 
 
-Benchmark runtime overheadconsecutive execution of merge + agg
-
-![benchmark_runtime_n_operators_aggregation](benchmark_logs/plots/benchmark_runtime_n_operators_aggregation.png)
 
 
-Benchmark runtime overhead for different estimators
+### Benchmark: Runtime Overhead – Consecutive `merge + agg`
 
-![benchmark_runtime_n_rows_different_estimators](benchmark_logs/plots/benchmark_runtime_n_rows_different_estimators.png)
+<p align="center">
+  <img src="benchmark_logs/plots/benchmark_runtime_n_operators_aggregation.png" width="70%">
+</p>
 
-Benchmark runtime overhead for different reduce funtions in aggregation
 
-![benchmark_runtime_n_rows_different_reduce_functions](benchmark_logs/plots/benchmark_runtime_n_rows_different_reduce_functions.png)
+**Setup**
+
+Using the same setup as in the memory benchmark, this experiment measures 
+runtime overhead when repeatedly executing `merge` + `agg` operations.  
+Different strategies for collecting provenance IDs inside the aggregation 
+function are compared.
+
+**Goal**
+
+Evaluate scalability and identify differences between provenance collection strategies.
+
+**Key Findings**
+
+- Runtime scales poorly with the number of consecutive operations.
+- The growth appears close to quadratic.
+- No significant performance differences are observed between the tested functions.
+- Overhead is dominated by repeated provenance handling rather than the specific aggregation strategy.
+
+
+
+
+### Benchmark: Runtime Overhead – Different Estimators
+
+<p align="center">
+  <img src="benchmark_logs/plots/benchmark_runtime_n_rows_different_estimators.png" width="70%">
+</p>
+
+**Goal**
+
+This benchmark evaluates whether different estimators introduce varying 
+absolute runtime overhead when provenance tracking is enabled.
+
+**Setup**
+
+The runtime is measured across three sklearn-based estimators while 
+processing up to 10 million rows.
+
+**Key Findings**
+
+- Most sklearn estimators show similar absolute overhead.
+- The measured overhead is approximately **0.5 seconds for 10 million rows**.
+- The overhead primarily results from dropping and reattaching provenance columns.
+- `TableVectorizer` shows higher variance.
+  - This is likely due to its longer execution time.
+  - Longer runtimes increase susceptibility to background system noise.
+
+Overall, the estimator choice has minimal impact on provenance overhead.
+
+## Benchmark: Runtime Overhead – Different Reduce Functions
+
+<p align="center">
+  <img src="benchmark_logs/plots/benchmark_runtime_n_rows_different_reduce_functions.png" width="70%">
+</p>
+
+
+**Goal**
+
+Compare runtime overhead introduced by different aggregation reduce functions.
+
+**Setup**
+
+- Aggregation pattern:
+  `.agg({"text": count, "_prov0": agg_func, "_prov1": agg_func})`
+- Runtime is averaged over **5 runs**
+- Evaluated across increasing numbers of rows
+
+**Key Findings**
+
+- `list` is the fastest reduce function.
+- Despite being the fastest option, it still introduces significant overhead.
+- For 10 million rows:
+  - Baseline runtime: ~0.5 seconds
+  - With provenance: ~2 seconds
+  - ≈ 3× runtime increase
+
+The overhead grows with dataset size and remains substantial even for the most efficient reduce function.
+
+
 
 ---
 

@@ -732,9 +732,7 @@ snakeviz "benchmark_logs/SquashingScalerCase_with_provenance.out"
 ```
 
 The main issue arises from injecting provenance information in the form
-of:
-
-    _prov: list
+of: `_prov: list`
 
 During aggregation (e.g., `agg(prov_col=list)`), provenance IDs are
 collected into Python lists. This has an important consequence:

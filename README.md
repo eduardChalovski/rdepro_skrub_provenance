@@ -546,7 +546,7 @@ python -m pipelines.VariousStringEncodersCase --track-provenance
 ## Authors
 - Teodor Aleksiev 0530377
 - Jeanne
-- Yigit
+- Yigit 0505962
 - Eduard Chalovski 0412770
 
 ---

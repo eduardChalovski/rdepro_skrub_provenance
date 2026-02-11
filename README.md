@@ -281,14 +281,11 @@ For modeling, the pipeline combines the aggregated category risk score with simp
 Without provenance enabled: 4.14 seconds 
 With provenance enabled: 4.16 seconds
 
-**Imbalanced Learning with RandomUnderSampler**
-This pipeline demonstrates provenance tracking in the presence of row-sampling operations, which are particularly challenging because they change the number of rows and may duplicate or remove records. The task is a binary classification problem on the Olist datasets, where the goal is to predict whether an order will be delivered late (is_late), a label that is typically imbalanced.
-The pipeline loads and joins the core Olist tables required to build an order-level dataset, including orders, order items, payments, and customer location information. Datetime columns are parsed and a binary target variable is_late is computed by comparing the delivered date with the estimated delivery date. A small set of numeric and categorical features is selected for modeling.
-To address the class imbalance, the pipeline applies RandomUnderSampler from the imbalanced-learn library to downsample the majority class in the training set. Unlike standard scikit-learn transformers that preserve the number of rows, this operation changes the dataset cardinality and therefore requires careful provenance propagation. The pipeline then preprocesses numeric features with scaling and categorical features with one-hot encoding, and trains a HistGradientBoostingClassifier. Evaluation is performed on a held-out test set using skrub’s train/test utilities.
-This pipeline is a useful stress test for provenance tracking because it highlights how provenance identifiers should behave when rows are removed or selected by a sampling strategy, while remaining compatible with a standard end-to-end machine learning workflow.
+**Customer churn**
+This pipeline builds a customer-level churn risk classifier using transactional, delivery, review, and geolocation data. At the start, it measures total runtime. It then loads sampled datasets. The preprocessing merges orders with items, payments, and review scores, converts delivery timestamps to datetime, and computes a numerical delivery delay in days. Next, it aggregates everything to the customer level, computing behavioral features such as number of orders, total spending, average freight cost, average delivery delay, and worst review score. Missing values are filled with zero. Geolocation features (latitude, longitude, city, state) are joined in, and a binary target variable churn_risk is created — defined as customers whose worst review score is ≤ 2. For modeling, numeric features are passed through a preprocessing pipeline that first applies SquashingScaler (to compress extreme outliers) and then RobustScaler (to reduce sensitivity to remaining outliers), while categorical city and state variables are ordinal-encoded. A HistGradientBoostingClassifier is trained using skrub’s pipeline abstraction, the data is split into train/test sets, and test accuracy is reported. Finally, predictions on the test set are printed.
 
-Without provenance enabled: 6.17 seconds 
-With provenance enabled: 6.37 seconds
+Without provenance enabled: 11.65 seconds
+With provenance enabled: 128.16 seconds
 
 ---
 

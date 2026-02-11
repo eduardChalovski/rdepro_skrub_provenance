@@ -1,28 +1,28 @@
-# Customer Churn Risk Classification Pipeline (Skrub + Provenance)
-# "Which customers are at risk of churning, based on their purchasing patterns and satisfaction signals?"
-#
-# Uses the same Olist e-commerce tables as pipeline1 (revenue prediction),
-# but targets a BINARY CLASSIFICATION task: did the customer leave a negative review (score <= 2)?
-#
-# To run:
-#   python -m pipelines.pipeline2_churn_classification --track-provenance
-
+import time
+start_time = time.time()
 import sys
+import subprocess
+def run_uv_sync():
+    """Install dependencies via uv before running the rest of the pipeline"""
+    try:
+        subprocess.run([sys.executable, "-m", "uv", "sync"], check=True)
+        print("✅ uv dependencies installed successfully")
+    except subprocess.CalledProcessError as e:
+        print("❌ uv install failed")
+        print(e)
+        sys.exit(1)
+run_uv_sync()
 from pathlib import Path
-
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
-import numpy as np
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OrdinalEncoder, RobustScaler
 from sklearn.ensemble import HistGradientBoostingClassifier
 import skrub
-from skrub import SquashingScaler, DatetimeEncoder
-
+from skrub import SquashingScaler, ToDatetime
 import argparse
-
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--track-provenance",
@@ -30,7 +30,6 @@ parser.add_argument(
     help="Enable provenance tracking"
 )
 args = parser.parse_args()
-
 if args.track_provenance:
     print("Provenance is enabled")
     from src.rdepro_skrub_provenance.monkey_patching_v02_data_provenance import enable_why_data_provenance, evaluate_provenance
@@ -38,26 +37,18 @@ if args.track_provenance:
 else:
     print("Provenance is disabled")
 
-
-# -------------------------------------------------
-# 1. LOAD RAW TABLES
-# -------------------------------------------------
 print("Libraries imported")
 
-customers = skrub.var("customers", pd.read_csv('./src/datasets/olist_customers_dataset.csv'))
-orders = skrub.var("orders", pd.read_csv('./src/datasets/olist_orders_dataset.csv'))
-order_items = skrub.var("order_items", pd.read_csv('./src/datasets/olist_order_items_dataset.csv'))
-payments = skrub.var("payments", pd.read_csv('./src/datasets/olist_order_payments_dataset.csv'))
-reviews = skrub.var("reviews", pd.read_csv('./src/datasets/olist_order_reviews_dataset.csv'))
-order_payments = skrub.var("order_payments", pd.read_csv('./src/datasets/olist_order_payments_dataset.csv'))
-geolocation = skrub.var("geolocation", pd.read_csv('./src/datasets/olist_geolocation_dataset.csv'))
+customers = skrub.var("customers", pd.read_csv('./src/datasets/olist_customers_dataset.csv').sample(frac = 0.001))
+orders = skrub.var("orders", pd.read_csv('./src/datasets/olist_orders_dataset.csv').sample(frac = 0.001))
+order_items = skrub.var("order_items", pd.read_csv('./src/datasets/olist_order_items_dataset.csv').sample(frac = 0.001))
+payments = skrub.var("payments", pd.read_csv('./src/datasets/olist_order_payments_dataset.csv').sample(frac = 0.001))
+reviews = skrub.var("reviews", pd.read_csv('./src/datasets/olist_order_reviews_dataset.csv').sample(frac = 0.001))
+order_payments = skrub.var("order_payments", pd.read_csv('./src/datasets/olist_order_payments_dataset.csv').sample(frac = 0.001))
+geolocation = skrub.var("geolocation", pd.read_csv('./src/datasets/olist_geolocation_dataset.csv').sample(frac = 0.001))
 
 print("Files read, starting the preprocessing")
 
-
-# -------------------------------------------------
-# 2. MERGE RAW TABLES AT ORDER-ROW LEVEL (one join chain)
-# -------------------------------------------------
 orders_full = (
     orders
     .merge(order_items, on='order_id', how='left')
@@ -65,13 +56,7 @@ orders_full = (
     .merge(reviews.skb.select(['order_id', 'review_score']), on='order_id', how='left')
 )
 
-# Datetime features for delivery delay
-#orders_full = orders_full.assign(
-#    order_delivered_customer_date=pd.to_datetime(orders_full['order_delivered_customer_date']),
-#    order_estimated_delivery_date=pd.to_datetime(orders_full['order_estimated_delivery_date']),
-#)
-
-orders_full = orders_full.skb.apply(DatetimeEncoder(), cols = ['order_delivered_customer_date', 'order_estimated_delivery_date'])
+orders_full = orders_full.skb.apply(ToDatetime(), cols = ['order_delivered_customer_date', 'order_estimated_delivery_date'])
 orders_full = orders_full.assign(
     delivery_delay_days=(
         (orders_full['order_delivered_customer_date'] - orders_full['order_estimated_delivery_date'])
@@ -79,10 +64,6 @@ orders_full = orders_full.assign(
     ).fillna(0),
 )
 
-
-# -------------------------------------------------
-# 3. SINGLE CUSTOMER-LEVEL AGGREGATION (minimal)
-# -------------------------------------------------
 customer_features = orders_full.groupby('customer_id').agg(
     n_orders=('order_id', 'nunique'),
     sum_payment=('payment_value', 'sum'),
@@ -91,14 +72,9 @@ customer_features = orders_full.groupby('customer_id').agg(
     worst_review_score=('review_score', 'min'),
 ).reset_index()
 
-# Fill NaN
 for col in customer_features.skb.preview().columns.drop('customer_id'):
     customer_features = customer_features.assign(**{col: customer_features[col].fillna(0)})
 
-
-# -------------------------------------------------
-# 8. MERGE CUSTOMER GEOLOCATION  (same as pipeline1)
-# -------------------------------------------------
 geo_features = customers.skb.select(['customer_id', 'customer_zip_code_prefix']).merge(
     geolocation.drop_duplicates('geolocation_zip_code_prefix'),
     left_on='customer_zip_code_prefix',
@@ -111,20 +87,12 @@ customer_features = customer_features.merge(
     how='left'
 )
 
-
-# -------------------------------------------------
-# 9. DEFINE TARGET: churn risk = worst review score <= 2
-# -------------------------------------------------
 customer_features = customer_features.assign(
     churn_risk=(customer_features['worst_review_score'] <= 2).astype(int)
 )
 
 print(f"Churn risk distribution:\n{customer_features['churn_risk'].value_counts()}")
 
-
-# -------------------------------------------------
-# 10. PREPARE FEATURES FOR ML
-# -------------------------------------------------
 numeric_features = [
     'n_orders', 'sum_payment', 'mean_freight', 'mean_delivery_delay',
     'geolocation_lat', 'geolocation_lng',
@@ -141,11 +109,6 @@ preprocessor = ColumnTransformer(
     ]
 )
 
-
-# -------------------------------------------------
-# 11. BUILD SKRUB PIPELINE & EVALUATE
-# -------------------------------------------------
-# Drop the review scores from X so the model can't trivially leak the target
 feature_cols = numeric_features + categorical_features
 
 y = customer_features['churn_risk'].skb.mark_as_y()
@@ -162,3 +125,7 @@ print(f"Test accuracy: {score}")
 
 pred = learner.predict(split["test"])
 print(pred)
+end_time = time.time() 
+
+elapsed = end_time - start_time
+print(f"⏱ Elapsed time: {elapsed:.2f} seconds")

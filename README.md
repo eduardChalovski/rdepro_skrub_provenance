@@ -380,6 +380,7 @@ All benchmarks are executed on the following system:
 </p>
 
 **Goal**
+
 Compare the memory footprint of different collection types when sequentially merging and aggregating DataFrames 10 times, focusing on the overhead introduced by collecting provenance ids in the collections.
 
 **Setup**

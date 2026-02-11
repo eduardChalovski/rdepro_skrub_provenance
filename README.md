@@ -368,8 +368,10 @@ Metrics include:
 - Execution time overhead
 - Memory usage overhead
 
-The results help quantify the trade-offs between transparency and performance.
-
+All benchmarks are executed on the following system:
+- Processor	AMD Ryzen 7 4800H with Radeon Graphics (2.90 GHz)
+- Installed RAM	16,0 GB (15,4 GB usable)
+- System type	64-bit operating system, x64-based processor
 
 ### Benchmark: Memory Overhead - Single Aggregation
 
@@ -377,19 +379,19 @@ The results help quantify the trade-offs between transparency and performance.
   <img src="benchmark_logs/plots/benchmark_memory_agg.png" width="65%">
 </p>
 
-This benchmark compares the memory footprint of different collections by 
-sequentially merging and aggregating DataFrames 10 times.
+**Goal**
+Compare the memory footprint of different collection types when sequentially merging and aggregating DataFrames 10 times, focusing on the overhead introduced by collecting provenance ids in the collections.
 
-- The *no provenance* line performs a `max` over identical values.
-- Values remain the same but receive unique provenance IDs.
-- Memory overhead is therefore caused purely by provenance tracking.
+**Setup**
+- The same data, stored in different skrub variables (each with unique provenance IDs), is repeatedly merged into the final result, generating new provenance IDs at each step.
+- The benchmark performs a max aggregation over identical non provenance values, so the memory used by the actual data does not increase.
+- Memory growth comes solely from the lists of provenance IDs.
+- Therefore, any observed memory overhead is entirely due to provenance tracking.
 
-Observations:
-- Lists are more memory efficient than sets.
-- A flat list representation `[1,2,3]` (shown as `list_reduce` in the plot) performs worse than the nested structure `[[[1],2],3]`.
-- This is likely due to implementation details: `list_reduce` creates empty lists `[]`, whereas `list` may produce `NaN` values in this scenario.
-
-
+**Key Findings**
+- Lists are more memory-efficient than sets.
+- A flat list [1,2,3] (list_reduce) uses more memory than a nested structure (list) [[[1],2],3].
+- The difference likely arises from implementation details: list_reduce generates empty lists [], while list may produce NaN values in this scenario.
 
 
 ### Benchmark: Runtime Overhead – Consecutive `merge + agg`
@@ -398,6 +400,10 @@ Observations:
   <img src="benchmark_logs/plots/benchmark_runtime_n_operators_aggregation.png" width="70%">
 </p>
 
+**Goal**
+
+Evaluate scalability and identify differences between provenance collection strategies.
+
 
 **Setup**
 
@@ -405,10 +411,6 @@ Using the same setup as in the memory benchmark, this experiment measures
 runtime overhead when repeatedly executing `merge` + `agg` operations.  
 Different strategies for collecting provenance IDs inside the aggregation 
 function are compared.
-
-**Goal**
-
-Evaluate scalability and identify differences between provenance collection strategies.
 
 **Key Findings**
 
@@ -475,8 +477,6 @@ Compare runtime overhead introduced by different aggregation reduce functions.
   - ≈ 3× runtime increase
 
 The overhead grows with dataset size and remains substantial even for the most efficient reduce function.
-
-
 
 ---
 
